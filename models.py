@@ -1,88 +1,78 @@
 '''
-socket_routes
-file containing all the routes related to socket.io
+models
+defines sql alchemy data models
+also contains the definition for the room class used to keep track of socket.io rooms
+
+Just a sidenote, using SQLAlchemy is a pain. If you want to go above and beyond, 
+do this whole project in Node.js + Express and use Prisma instead, 
+Prisma docs also looks so much better in comparison
+
+or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attacks :) )
 '''
 
+from sqlalchemy import String, Integer, String, ForeignKey
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship
+from typing import Dict
+# data models
+class Base(DeclarativeBase):
+    pass
 
-from flask_socketio import join_room, emit, leave_room
-from flask import request
+# model to store user information
 
-try:
-    from __main__ import socketio
-except ImportError:
-    from app import socketio
 
-from models import Room
-
-import db
-
-room = Room()
-
-# when the client connects to a socket
-# this event is emitted when the io() function is called in JS
-@socketio.on('connect')
-def connect():
-    username = request.cookies.get("username")
-    room_id = request.cookies.get("room_id")
-    if room_id is None or username is None:
-        return
-    # socket automatically leaves a room on client disconnect
-    # so on client connect, the room needs to be rejoined
-    join_room(int(room_id))
-    emit("incoming", (f"{username} has connected", "green"), to=int(room_id))
-
-# event when client disconnects
-# quite unreliable use sparingly
-@socketio.on('disconnect')
-def disconnect():
-    username = request.cookies.get("username")
-    room_id = request.cookies.get("room_id")
-    if room_id is None or username is None:
-        return
-    emit("incoming", (f"{username} has disconnected", "red"), to=int(room_id))
-
-# send message event handler
-@socketio.on("send")
-def send(username, message, room_id):
-    emit("incoming", (f"{username}: {message}"), to=room_id)
+class User(Base):
+    __tablename__ = "user"
     
-# join room event handler
-# sent when the user joins a room
-@socketio.on("join")
-def join(sender_name, receiver_name):
+    userid: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String, unique=True)
+    password: Mapped[str] = mapped_column(String)
     
-    receiver = db.get_user(receiver_name)
-    if receiver is None:
-        return "Unknown receiver!"
+    friends = relationship("Friendship", back_populates="user")
+
+class Friendship(Base):
+    __tablename__ = "friendship"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.userid"))
+    friend_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.userid"))
+
+    user = relationship("User", back_populates="friends")
+
+# stateful counter used to generate the room id
+class Counter():
+    def __init__(self):
+        self.counter = 0
     
-    sender = db.get_user(sender_name)
-    if sender is None:
-        return "Unknown sender!"
+    def get(self):
+        self.counter += 1
+        return self.counter
 
-    room_id = room.get_room_id(receiver_name)
+# Room class, used to keep track of which username is in which room
+class Room():
+    def __init__(self):
+        self.counter = Counter()
+        # dictionary that maps the username to the room id
+        # for example self.dict["John"] -> gives you the room id of 
+        # the room where John is in
+        self.dict: Dict[str, int] = {}
 
-    # if the user is already inside of a room 
-    if room_id is not None:
-        
-        room.join_room(sender_name, room_id)
-        join_room(room_id)
-        # emit to everyone in the room except the sender
-        emit("incoming", (f"{sender_name} has joined the room.", "green"), to=room_id, include_self=False)
-        # emit only to the sender
-        emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"))
+    def create_room(self, sender: str, receiver: str) -> int:
+        room_id = self.counter.get()
+        self.dict[sender] = room_id
+        self.dict[receiver] = room_id
         return room_id
+    
+    def join_room(self,  sender: str, room_id: int) -> int:
+        self.dict[sender] = room_id
 
-    # if the user isn't inside of any room, 
-    # perhaps this user has recently left a room
-    # or is simply a new user looking to chat with someone
-    room_id = room.create_room(sender_name, receiver_name)
-    join_room(room_id)
-    emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"), to=room_id)
-    return room_id
+    def leave_room(self, user):
+        if user not in self.dict.keys():
+            return
+        del self.dict[user]
 
-# leave room event handler
-@socketio.on("leave")
-def leave(username, room_id):
-    emit("incoming", (f"{username} has left the room.", "red"), to=room_id)
-    leave_room(room_id)
-    room.leave_room(username)
+    # gets the room id from a user
+    def get_room_id(self, user: str):
+        if user not in self.dict.keys():
+            return None
+        return self.dict[user]
+    
