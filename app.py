@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, abort, url_for
 from flask_socketio import SocketIO
 import db
 import secrets
-
+import bcrypt
 # import logging
 
 # this turns off Flask Logging, uncomment this to turn off Logging
@@ -46,11 +46,11 @@ def login_user():
     user =  db.get_user(username)
     if user is None:
         return "Error: User does not exist!"
-
-    if user.password != password:
+    if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
+        return url_for('home', username=request.json.get("username"))
+    else:
         return "Error: Password does not match!"
-
-    return url_for('home', username=request.json.get("username"))
+    
 
 # handles a get request to the signup page
 @app.route("/signup")
@@ -66,7 +66,8 @@ def signup_user():
     password = request.json.get("password")
 
     if db.get_user(username) is None:
-        db.insert_user(username, password)
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        db.insert_user(username, hashed_password)
         return url_for('home', username=username)
     return "Error: User already exists!"
 
