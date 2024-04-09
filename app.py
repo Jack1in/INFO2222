@@ -4,8 +4,11 @@ this is where you'll find all of the get/post request handlers
 the socket event handlers are inside of socket_routes.py
 '''
 
-from flask import Flask, render_template, request, abort, url_for
+from flask import Flask, render_template, request, abort, url_for, jsonify
 from flask_socketio import SocketIO
+from sqlalchemy.orm import Session
+import json
+from models import User, Room
 import db
 import secrets
 import bcrypt
@@ -84,6 +87,28 @@ def home():
     return render_template("home.jinja", username=request.args.get("username"))
 
 
+# 测试数据模型和房间逻辑
+@app.route('/test')
+def test_models():
+    with Session(db.engine) as session:
+        session.query(User).delete()
+        session.commit()
+        # 创建用户
+        user1 = User(username='user1', password='123456')
+        user2 = User(username='user2', password='123456')
+        session.add(user1)
+        session.add(user2)
+        session.commit()
+        user1_info = session.query(User).filter_by(username='user1').first()
+        user2_info = session.query(User).filter_by(username='user2').first()
+
+        # 返回结果
+        return jsonify({
+            "User1": user1_info.username,
+            "User2": user2_info.username
+        })
+
 
 if __name__ == '__main__':
+
     socketio.run(app)

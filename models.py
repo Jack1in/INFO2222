@@ -10,7 +10,7 @@ Prisma docs also looks so much better in comparison
 or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attacks :) )
 '''
 
-from sqlalchemy import String, Integer, String, ForeignKey
+from sqlalchemy import String, Integer, String, ForeignKey,Table,Column
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship
 from typing import Dict
 # data models
@@ -19,6 +19,10 @@ class Base(DeclarativeBase):
 
 # model to store user information
 
+friend_association = Table('friend_association', Base.metadata,
+    Column('user_username', String, ForeignKey('user.username'), primary_key=True),
+    Column('friend_username', String, ForeignKey('user.username'), primary_key=True)
+)
 
 class User(Base):
     __tablename__ = "user"
@@ -30,6 +34,13 @@ class User(Base):
     # in other words we've mapped the username Python object property to an SQL column of type String 
     username: Mapped[str] = mapped_column(String, primary_key=True)
     password: Mapped[str] = mapped_column(String)
+    friends = relationship(
+        'User', 
+        secondary=friend_association,
+        primaryjoin=(friend_association.c.user_username == username),
+        secondaryjoin=(friend_association.c.friend_username == username),
+        backref="added_friends"
+    )
 
 # stateful counter used to generate the room id
 class Counter():
