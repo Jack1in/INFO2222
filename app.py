@@ -115,7 +115,7 @@ def test_models():
         # accept the request
         result_accept = user2.accept_request('user1', session)
         session.commit()
-        after_accept_user1_friends = [friend.username for friend in user1.friends]
+        after_accept_user1_friends = [friend.username for friend in user1.added_friends]
         after_accept_user2_friends = [friend.username for friend in user2.friends]
         # return the users
         return jsonify({

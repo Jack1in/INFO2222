@@ -42,12 +42,13 @@ class User(Base):
     username: Mapped[str] = mapped_column(String, primary_key=True)
     password: Mapped[str] = mapped_column(String)
     friends = relationship(
-        'User', 
+        'User',
         secondary=friend_association,
         primaryjoin=(friend_association.c.user_username == username),
         secondaryjoin=(friend_association.c.friend_username == username),
         backref="added_friends"
     )
+
     # New relationships for friend requests
     sent_requests = relationship(
         'User',
@@ -93,7 +94,6 @@ class User(Base):
         self.friends.append(friend)
         # remove the friend request
         self.received_requests.remove(friend)
-        # commit the changes
         session.commit()
         return "Friend added successfully."
 
