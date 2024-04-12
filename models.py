@@ -11,7 +11,7 @@ or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attack
 '''
 
 from sqlalchemy import String, Integer, String, ForeignKey,Table,Column
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship, Session
 from typing import Dict
 # data models
 class Base(DeclarativeBase):
@@ -41,6 +41,23 @@ class User(Base):
         secondaryjoin=(friend_association.c.friend_username == username),
         backref="added_friends"
     )
+    def add_friend(self, friend_username: str, session: Session) -> str:
+        # check if the friend exists
+        friend = session.query(User).filter_by(username=friend_username).first()
+        if not friend:
+            return "Friend username does not exist."
+
+        # if the friend is already in the friends list
+        if friend in self.friends:
+            return "Already friends."
+
+        # add the friend
+        self.friends.append(friend)
+        friend.friends.append(self)  # 确保双向关系
+
+        # commit the changes
+        session.commit()
+        return "Friend added successfully."
 
 # stateful counter used to generate the room id
 class Counter():
