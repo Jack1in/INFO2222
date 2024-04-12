@@ -102,12 +102,33 @@ def test_models():
         user1_info = session.query(User).filter_by(username='user1').first()
         user2_info = session.query(User).filter_by(username='user2').first()
         # add friends
-        user1.add_friend('user2', session)
+        result = user1.send_request('user2', session)
+        before_handle_user1_sent = user1.view_requests('sent')
+        before_handle_user2_received = user2.view_requests('received')
+
+        # reject the request
+        user2.reject_request('user1', session)
+        after_reject_user1_sent = user1.view_requests('sent')
+        after_reject_user2_received = user2.view_requests('received')
+        # send again
+        user1.send_request('user2', session)
+        # accept the request
+        result_accept = user2.accept_request('user1', session)
+        session.commit()
+        after_accept_user1_friends = [friend.username for friend in user1.friends]
+        after_accept_user2_friends = [friend.username for friend in user2.friends]
         # return the users
         return jsonify({
             "User1": user1_info.username,
             "User2": user2_info.username,
-            "User1 Friends": [friend.username for friend in user1_info.friends]
+            "Before handle User1 Sent": before_handle_user1_sent,
+            "Before handle User2 Received": before_handle_user2_received,
+            "After Reject User1 Sent": after_reject_user1_sent,
+            "After Reject User2 Received": after_reject_user2_received,
+            "After Accept User1 Friends": after_accept_user1_friends,
+            "After Accept User2 Friends": after_accept_user2_friends,
+            "result from sending request": result,
+            "result from accepting request": result_accept
         })
 
 
