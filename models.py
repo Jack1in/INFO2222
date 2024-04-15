@@ -23,13 +23,20 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "user"
     
-    # looks complicated but basically means
-    # I want a username column of type string,
-    # and I want this column to be my primary key
-    # then accessing john.username -> will give me some data of type string
-    # in other words we've mapped the username Python object property to an SQL column of type String 
-    username: Mapped[str] = mapped_column(String, primary_key=True)
+    userid: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String, unique=True)
     password: Mapped[str] = mapped_column(String)
+    
+    friends = relationship("Friendship", back_populates="user")
+
+class Friendship(Base):
+    __tablename__ = "friendship"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.userid"))
+    friend_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.userid"))
+
+    user = relationship("User", back_populates="friends")
 
 # stateful counter used to generate the room id
 class Counter():
