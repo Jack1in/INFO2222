@@ -6,6 +6,7 @@ file containing all the routes related to socket.io
 
 from flask_socketio import join_room, emit, leave_room
 from flask import request
+import os,json,datetime
 
 try:
     from __main__ import socketio
@@ -41,10 +42,30 @@ def disconnect():
         return
     emit("incoming", (f"{username} has disconnected", "red"), to=int(room_id))
 
-# send message event handler
 @socketio.on("send")
 def send(username, message, room_id):
+    # send the message
     emit("incoming", (f"{username}: {message}"), to=room_id)
+    
+    # save file 
+    file_path = f"messages/{room_id}.json"
+    
+    # create the directory if it doesn't exist
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    # load the existing messages
+    if os.path.exists(file_path):
+        with open(file_path, "r") as file:
+            data = json.load(file)
+    else:
+        data = []
+
+    # append the new message
+    data.append({"username": username, "message": message, "timestamp": str(datetime.datetime.now())})
+
+    # save the messages
+    with open(file_path, "w") as file:
+        json.dump(data, file, indent=4)
     
 # join room event handler
 # sent when the user joins a room

@@ -10,8 +10,8 @@ Prisma docs also looks so much better in comparison
 or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attacks :) )
 '''
 
-from sqlalchemy import String, Integer, String, ForeignKey
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship
+from sqlalchemy import String, Integer, ForeignKey,Table,Column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship, Session
 from typing import Dict
 # data models
 class Base(DeclarativeBase):
@@ -19,6 +19,17 @@ class Base(DeclarativeBase):
 
 # model to store user information
 
+# model to store friend associations
+friend_association = Table('friend_association', Base.metadata,
+    Column('user_username', String, ForeignKey('user.username'), primary_key=True),
+    Column('friend_username', String, ForeignKey('user.username'), primary_key=True)
+)
+
+# model to store friend requests
+friend_request = Table('friend_request', Base.metadata,
+    Column('sender_username', String, ForeignKey('user.username'), primary_key=True),
+    Column('receiver_username', String, ForeignKey('user.username'), primary_key=True)
+)
 
 class User(Base):
     __tablename__ = "user"
@@ -26,18 +37,87 @@ class User(Base):
     userid: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String, unique=True)
     password: Mapped[str] = mapped_column(String)
+
+
+    friends = relationship(
+        'User',
+        secondary=friend_association,
+        primaryjoin=(friend_association.c.user_username == username),
+        secondaryjoin=(friend_association.c.friend_username == username),
+        backref="added_friends"
+    )
+
+    # New relationships for friend requests
+    sent_requests = relationship(
+        'User',
+        secondary=friend_request,
+        primaryjoin=(friend_request.c.sender_username == username),
+        secondaryjoin=(friend_request.c.receiver_username == username),
+        backref="received_requests"
+    )
+
+    def send_request(self, friend_username: str, session: Session) -> str:
+        # check if the friend exists
+        friend = session.query(User).filter_by(username=friend_username).first()
+        if not friend:
+            return "Friend username does not exist."
+
+        # if the friend is already in the friends list
+        if friend in self.friends:
+            return "Already friends."
     
-    friends = relationship("Friendship", back_populates="user")
+        if friend in self.received_requests or friend in self.sent_requests:
+            return "Friend request already sent to this user."
 
-class Friendship(Base):
-    __tablename__ = "friendship"
+        # send 
+        self.sent_requests.append(friend)
+        # commit the changes
+        session.commit()
+        return "Friend request sent successfully."
+    
+    def accept_request(self, friend_username: str, session: Session) -> str:
+        # check if the friend exists
+        friend = session.query(User).filter_by(username=friend_username).first()
+        if not friend:
+            return "Friend username does not exist."
+        
+        # if the friend is already in the friends list
+        if friend in self.friends:
+            return "Already friends."
+        
+        # check if the friend request exists
+        if friend not in self.received_requests:
+            return "No friend request received from this user."
+        # add the friend
+        self.friends.append(friend)
+        # remove the friend request
+        self.received_requests.remove(friend)
+        session.commit()
+        return "Friend added successfully."
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.userid"))
-    friend_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.userid"))
+    def reject_request(self, friend_username: str, session: Session) -> str:
+        # check if the friend exists
+        friend = session.query(User).filter_by(username=friend_username).first()
+        if not friend:
+            return "Friend username does not exist."
+        
+        # check if the friend request exists
+        if friend not in self.received_requests:
+            return "No friend request received from this user."
+        # remove the friend request
+        self.received_requests.remove(friend)
+        # commit the changes
+        session.commit()
+        return "Friend request rejected."
 
-    user = relationship("User", back_populates="friends")
-
+    def view_requests(self, request_type: str):
+        if request_type == "sent":
+            return [user.username for user in self.sent_requests]
+        elif request_type == "received":
+            return [user.username for user in self.received_requests]
+        else:
+            raise ValueError("Invalid request type. Choose 'sent' or 'received'.")
+    
 # stateful counter used to generate the room id
 class Counter():
     def __init__(self):
