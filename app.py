@@ -12,6 +12,9 @@ from models import User, Room
 import db
 import secrets
 import bcrypt
+from flask import Flask, render_template
+from flask_socketio import SocketIO
+import os
 # import logging
 
 # this turns off Flask Logging, uncomment this to turn off Logging
@@ -19,9 +22,16 @@ import bcrypt
 # log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
-
+cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
+cert_path = os.path.join(cert_dir, 'localhost.crt')
+key_path = os.path.join(cert_dir, 'localhost.key')
 # secret key used to sign the session cookie
 app.config['SECRET_KEY'] = secrets.token_hex()
+app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SERVER_NAME'] = 'localhost:5000' 
+app.config['PREFERRED_URL_SCHEME'] = 'https' 
+app.config['SSL_CERT_PATH'] = cert_path
+app.config['SSL_KEY_PATH'] = key_path
 socketio = SocketIO(app)
 
 # don't remove this!!
@@ -134,4 +144,4 @@ def test_models():
 
 if __name__ == '__main__':
 
-    socketio.run(app)
+     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
