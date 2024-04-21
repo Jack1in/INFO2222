@@ -1,40 +1,80 @@
-<!-- 
-Sign up page, pretty much the same as login.
--->
 {% extends 'base.jinja' %}
 
+{% block content %}
+<h1>Sign Up</h1>
+<p>Username</p>
+<input id="username" />
+<p>Password</p>
+<input id="password" type="password" />
+<button onclick="signup()">Sign up</button>
 
-{% block content %} 
-    <h1>Sign Up</h1>
-    <p>Username</p>
-    <input id="username"/>
-    <p>Password</p>
-    <input id="password" type="password"/>
-    <button onclick="signup()">Sign up</button>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    // Utility function to check if a URL is valid for redirection
+    function isValidURL(string) {
+        return string.startsWith("/");
+    }
 
-    <script>
-         function isValidURL(string) {
-            if (string.length == 0) {
-                return false;
-            }
-            if (string[0] == "/") {
-                return true;
-            }
-            return false;
+    // Function to handle user sign up
+    async function signup() {
+        if ($("#password").val().length < 4) {
+            alert("Password must be at least 4 characters long.");
+            return;
         }
-
-        // this function is identical to login(), see login.jinja
-        async function signup() {
-            let loginURL = "{{ url_for('signup_user') }}";
-            let res = await axios.post(loginURL, {
+        
+        try {
+            const keyPair = await window.crypto.subtle.generateKey({
+                name: "RSA-OAEP",
+                modulusLength: 2048,
+                publicExponent: new Uint8Array([1, 0, 1]),
+                hash: {name: "SHA-256"},
+            }, true, ["encrypt", "decrypt"]);
+            
+            const publicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+            const privateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+            
+            // Convert the ArrayBuffer to Base64 string
+            const publicKeyBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(publicKey)));
+            
+            const res = await axios.post("{{ url_for('signup_user') }}", {
                 username: $("#username").val(),
-                password: $("#password").val()
+                password: $("#password").val(),
+                publicKey: publicKeyBase64
             });
+
             if (!isValidURL(res.data)) {
-                alert(res.data);
+                alert(res.data); // Display error message from server
                 return;
             }
-            window.open(res.data, "_self")
+            
+            // Store the private key securely in IndexedDB or similar
+            storePrivateKeyLocally(privateKey);
+            
+            // Redirect to the given URL
+            window.location.href = res.data;
+        } catch (error) {
+            console.error("Error during signup", error);
+            alert("An error occurred during signup. Please try again.");
         }
-    </script>
+    }
+
+    // Function to store private key locally
+    async function storePrivateKeyLocally(privateKey) {
+        const db = await window.indexedDB.open("KeyStore", 1);
+        db.onerror = (event) => {
+            console.error("Database error: ", event.target.errorCode);
+        };
+        db.onsuccess = (event) => {
+            const db = event.target.result;
+            const transaction = db.transaction("keys", "readwrite");
+            const store = transaction.objectStore("keys");
+            store.put({ id: 1, key: privateKey });
+            alert("Private key securely stored locally.");
+        };
+        db.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            db.createObjectStore("keys", { keyPath: "id" });
+        };
+    }
+</script>
 {% endblock %}
