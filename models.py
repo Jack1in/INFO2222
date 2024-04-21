@@ -41,6 +41,7 @@ class User(Base):
     # in other words we've mapped the username Python object property to an SQL column of type String 
     username: Mapped[str] = mapped_column(String, primary_key=True)
     password: Mapped[str] = mapped_column(String)
+    public_key: Mapped[str] = mapped_column(String)
     friends = relationship(
         'User',
         secondary=friend_association,
@@ -157,4 +158,8 @@ class Room():
         if user not in self.dict.keys():
             return None
         return self.dict[user]
+    
+    # get the users in a room
+    def get_users(self, room_id: int):
+        return [user for user, room in self.dict.items() if room == room_id]
     

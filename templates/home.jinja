@@ -61,7 +61,17 @@
 
 <script src="/static/js/libs/socket.io.min.js"></script>
 <script>
-    let room_id = 0;
+    let privateKey;
+    async function initialize() {
+        try {
+            privateKey = await getPrivateKey();
+        } catch (error) {
+            console.error('Failed to get private key:', error);
+            return;
+        }
+
+        let username = "{{ username }}";
+    }
 
     // when the user presses the "Enter" key inside of the "message box", 
     // the message is sent to the server
@@ -83,6 +93,7 @@
     $(document).ready(() => {
         // room_id is undefined if the user hasn't joined a room
         // we early return in this case
+        initialize();
         if (Cookies.get("room_id") == undefined) {
             return;
         }
@@ -103,17 +114,68 @@
     // initializes the socket
     const socket = io();
 
-    // an incoming message arrives, we'll add the message to the message box
+    // normal incoming message event
+    // when an incoming message arrives, we'll add the message to the message box
     socket.on("incoming", (msg, color="black") => {
         add_message(msg, color);
-    })
+    });
+
+    // an incoming message arrives, we'll add the message to the message box
+    socket.on("incoming_message", async (encryptedMsg, color = "black") => {
+        const [sender, msg] = encryptedMsg.split(": ");
+        let decryptedMessage;
+        if (sender == username){
+            return;
+        }
+        decryptedMessage = await decryptMessage(privateKey, msg);
+        // make the message as sende_name: message
+        decryptedMessage = `${sender}: ${decryptedMessage}`;
+        add_message(decryptedMessage, color);
+    });
+
     
-    // we'll send the message to the server by emitting a "send" event
-    function send() {
+    // Modified send function to encrypt message before sending
+    async function send() {
         let message = $("#message").val();
         $("#message").val("");
-        socket.emit("send", username, message, room_id);  
-    } 
+        let local_message = `${username}: ${message}`;
+        add_message(local_message, "blue");
+        const sender = username;
+        const receiver = $("#receiver").val();
+        const publicKey_receiver = await fetchPublicKey(receiver);  // Fetch the receiver's public key from server
+        const publicKey_sender = await fetchPublicKey(sender);  // Fetch the sender's public key from server
+        const encryptedMessage = await encryptMessage(publicKey_receiver, message);
+        const encryptedMessage_sender = await encryptMessage(publicKey_sender, message);
+        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,room_id);
+    };
+
+    // Function to fetch public key from server
+    async function fetchPublicKey(receiver) {
+        try {
+            const response = await axios.get(`/api/public-keys/${receiver}`);
+            return response.data.publicKey;  // Assuming the server sends back the public key directly
+        } catch (error) {
+            console.error('Failed to fetch public key:', error);
+            return null;
+        }
+    };
+
+    async function loadAndDisplayMessages(username, chatPartner) {
+        try {
+            const response = await fetch(`/messages/${username}/${chatPartner}.json`);
+            const messages = await response.json();
+
+            for (const message of messages) {
+                const decryptedMessage = await decryptMessage(privateKey, message.message);
+                if(username == message.username)
+                    add_message(`${message.username}: ${decryptedMessage}`, "blue");
+                else
+                    add_message(`${message.username}: ${decryptedMessage}`, "black");
+            }
+        } catch (error) {
+            console.error('Error loading or decrypting messages:', error);
+        }
+    }
 
     // we emit a join room event to the server to join a room
     function join_room() {
@@ -138,8 +200,8 @@
             $("#chat_box").hide();
             $("#input_box").show();
         });
-     
-    }
+        loadAndDisplayMessages(username, receiver);
+    };
 
     // function when the user clicks on "Leave Room"
     // emits a "leave" event, telling the server that we want to leave the room
@@ -156,7 +218,120 @@
         let box = $("#message_box");
         let child = $(`<p style="color:${color}; margin: 0px;"></p>`).text(message);
         box.append(child);
+    };
+
+    // function to encrypt a message
+    // function to encrypt a message
+    async function encryptMessage(publicKey, message) {
+        const enc = new TextEncoder();
+        const publicKeyBuffer = new Uint8Array(atob(publicKey).split('').map(char => char.charCodeAt(0)));
+        const importedKey = await window.crypto.subtle.importKey(
+            "spki",
+            publicKeyBuffer,
+            {
+                name: "RSA-OAEP",
+                hash: "SHA-256",
+            },
+            false,
+            ["encrypt"]
+        );
+
+        const encrypted = await window.crypto.subtle.encrypt(
+            { name: "RSA-OAEP" },
+            importedKey,
+            enc.encode(message)
+        );
+        
+        return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+    };
+
+
+        // function to decrypt a message
+    async function decryptMessage(privateKey, encryptedMessageBase64) {
+        console.log("privateKey", privateKey);
+        console.log("encryptedMessage", encryptedMessageBase64);
+        const dec = new TextDecoder();
+        let encryptedMessage;
+        let importedKey;
+        try {
+            importedKey = await window.crypto.subtle.importKey(
+                "pkcs8",
+                privateKey,
+                {
+                    name: "RSA-OAEP",
+                    hash: "SHA-256",
+                },
+                false,
+                ["decrypt"]
+            );
+        } catch (error) {
+            console.error('Failed to import private key:', error);
+            throw error;
+        }
+        try{
+            encryptedMessage = window.atob(encryptedMessageBase64);
+        }catch(error){
+            console.log("error caused by atob");
+            throw error;
+        }
+        try {
+            // 确保 encryptedMessage 是 ArrayBuffer 类型
+            // 如果 encryptedMessageBase64 是 Base64 字符串，则需要解码
+            const encryptedMessageArrayBuffer = new Uint8Array(encryptedMessage.length);
+            for (let i = 0; i < encryptedMessage.length; i++) {
+                encryptedMessageArrayBuffer[i] = encryptedMessage.charCodeAt(i);
+            }
+
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: "RSA-OAEP" },
+                importedKey,
+                encryptedMessageArrayBuffer
+            );
+            return dec.decode(new Uint8Array(decrypted));
+        } catch (error) {
+            console.error('Failed to decrypt message error:', error);
+            throw error;
+        }
+    };
+
+
+    function generateHMACKey() {
+        return crypto.getRandomValues(new Uint8Array(16)).reduce((acc, i) => acc + ('0' + i.toString(16)).slice(-2), '');
     }
+
+    async function getPrivateKey() {
+        return new Promise((resolve, reject) => {
+            // open the database
+            const dbRequest = window.indexedDB.open("KeyStore", 1);
+
+            dbRequest.onerror = function(event) {
+                console.error("Database error: ", event.target.errorCode);
+                reject("Failed to open IndexedDB.");
+            };
+
+            dbRequest.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(["keys"], "readonly");
+                const store = transaction.objectStore("keys");
+                const getRequest = store.get(1);  
+                getRequest.onerror = function(event) {
+                    console.error("Error fetching private key:", event.target.errorCode);
+                    reject("Failed to retrieve the private key.");
+                };
+
+                getRequest.onsuccess = function(event) {
+                    if (getRequest.result) {
+                        console.log("Private key retrieved successfully.");
+                        resolve(getRequest.result.key);  // return the private key
+                    } else {
+                        console.log("No private key found.");
+                        reject("No private key found in the database.");
+                    }
+                };
+            };
+    });
+}
+
     
 </script>
 {% endblock %}
