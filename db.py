@@ -32,3 +32,49 @@ def insert_user(username: str, password: str):
 def get_user(username: str):
     with Session(engine) as session:
         return session.get(User, username)
+
+def send_friend_request(sender_username, receiver_username):
+    with Session(engine) as session:
+        sender = session.get(User, sender_username)
+        receiver = session.get(User, receiver_username)
+        if sender and receiver:
+            result = sender.send_request(receiver_username, session)
+            session.commit()
+            return result
+        return None
+
+def accept_friend_request(sender_username, receiver_username):
+    with Session(engine) as session:
+        receiver = session.get(User, receiver_username)
+        if receiver:
+            response = receiver.accept_request(sender_username, session)
+            session.commit()
+            return response
+        return None
+
+def reject_friend_request(sender_username, receiver_username):
+    with Session(engine) as session:
+        receiver = session.get(User, receiver_username)
+        if receiver:
+            response = receiver.reject_request(sender_username, session)
+            session.commit()
+            return response
+        return None
+
+
+def get_friend_requests(username: str) -> List[dict]:
+    with Session(engine) as session:
+        user = session.get(User, username)
+        if user:
+            requests = [{'username': name} for name in user.view_requests('received')]
+            print("Formatted Friend Requests:", requests)  # Debugging line
+            return requests
+        return []
+
+
+
+
+def get_friends_list(username: str):
+    with Session(engine) as session:
+        user = session.get(User, username)
+        return [friend.username for friend in user.friends] if user else []

@@ -1,3 +1,4 @@
+
 '''
 models
 defines sql alchemy data models
@@ -9,10 +10,11 @@ Prisma docs also looks so much better in comparison
 
 or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attacks :) )
 '''
+from collections import UserList
+from sqlalchemy import String, Integer, ForeignKey, Table, Column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
+from typing import Dict, List
 
-from sqlalchemy import String, Integer, ForeignKey,Table,Column
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship, Session
-from typing import Dict
 # data models
 class Base(DeclarativeBase):
     pass
@@ -34,11 +36,13 @@ friend_request = Table('friend_request', Base.metadata,
 class User(Base):
     __tablename__ = "user"
     
-    userid: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String, unique=True)
+    # looks complicated but basically means
+    # I want a username column of type string,
+    # and I want this column to be my primary key
+    # then accessing john.username -> will give me some data of type string
+    # in other words we've mapped the username Python object property to an SQL column of type String 
+    username: Mapped[str] = mapped_column(String, primary_key=True,unique=True)
     password: Mapped[str] = mapped_column(String)
-
-
     friends = relationship(
         'User',
         secondary=friend_association,
@@ -57,67 +61,59 @@ class User(Base):
     )
 
     def send_request(self, friend_username: str, session: Session) -> str:
-        # check if the friend exists
         friend = session.query(User).filter_by(username=friend_username).first()
         if not friend:
             return "Friend username does not exist."
 
-        # if the friend is already in the friends list
         if friend in self.friends:
             return "Already friends."
     
         if friend in self.received_requests or friend in self.sent_requests:
             return "Friend request already sent to this user."
 
-        # send 
         self.sent_requests.append(friend)
-        # commit the changes
         session.commit()
         return "Friend request sent successfully."
     
     def accept_request(self, friend_username: str, session: Session) -> str:
-        # check if the friend exists
         friend = session.query(User).filter_by(username=friend_username).first()
         if not friend:
             return "Friend username does not exist."
         
-        # if the friend is already in the friends list
         if friend in self.friends:
             return "Already friends."
         
-        # check if the friend request exists
         if friend not in self.received_requests:
             return "No friend request received from this user."
-        # add the friend
-        self.friends.append(friend)
-        # remove the friend request
-        self.received_requests.remove(friend)
+
+        self.friends.append(friend) 
+        friend.friends.append(self) 
         session.commit()
         return "Friend added successfully."
 
     def reject_request(self, friend_username: str, session: Session) -> str:
-        # check if the friend exists
         friend = session.query(User).filter_by(username=friend_username).first()
         if not friend:
             return "Friend username does not exist."
         
-        # check if the friend request exists
         if friend not in self.received_requests:
             return "No friend request received from this user."
-        # remove the friend request
         self.received_requests.remove(friend)
-        # commit the changes
         session.commit()
         return "Friend request rejected."
 
     def view_requests(self, request_type: str):
         if request_type == "sent":
-            return [user.username for user in self.sent_requests]
+            requests = [user.username for user in self.sent_requests]
         elif request_type == "received":
-            return [user.username for user in self.received_requests]
+            requests = [user.username for user in self.received_requests]
         else:
             raise ValueError("Invalid request type. Choose 'sent' or 'received'.")
-    
+
+        print(f"View Requests ({request_type}):", requests)  # Debugging line
+        return requests
+
+
 # stateful counter used to generate the room id
 class Counter():
     def __init__(self):
