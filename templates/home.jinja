@@ -83,11 +83,13 @@
     </section>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
 <script src="/static/js/libs/socket.io.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/static/js/libs/js.cookie.min.js"></script>
 <script>
     let privateKey;
+    let HMACkey;
     async function initialize() {
         try {
             privateKey = await getPrivateKey();
@@ -127,17 +129,47 @@
     Cookies.set('username', username);
     const socket = io();
 
-
     // normal incoming message event
-    // when an incoming message arrives, we'll add the message to the message box
     socket.on("incoming", (msg, color="black") => {
         add_message(msg, color);
     });
+    
+    // when an incoming message arrives, we'll add the message to the message box
+    socket.on("HMAC initialize", async () => {
+        HMACkey = generateHMACKey();
+        const receiver = $("#receiver").val();
+        try {
+            const publicKey_receiver = await fetchPublicKey(receiver);
+            const encryptedHMACkey = await encryptMessage(publicKey_receiver, HMACkey);
+            console.log("sending hmac key", encryptedHMACkey);
+            socket.emit("HMAC_key", encryptedHMACkey, room_id); // send an object with encrypted HMAC key and room_id
+        } catch (error) {
+            console.error('Error during HMAC key initialization:', error);
+        }
+    });
+
+    socket.on("HMACkey_incoming", async (data) => {
+        try {
+            console.log("receiving hmac key", data.encryptedHMACkey);
+            const decryptedHMACkey = await decryptMessage(privateKey, data.encryptedHMACkey);
+            HMACkey = decryptedHMACkey;
+        } catch (error) {
+            console.error('Error during HMAC key decryption:', error);
+        }
+    });
 
 
+
+    // normal incoming message event
     // an incoming message arrives, we'll add the message to the message box
-    socket.on("incoming_message", async (encryptedMsg, color = "black") => {
+    socket.on("incoming_message", async (encryptedMsg, color = "black",hmac) => {
+        
         const [sender, msg] = encryptedMsg.split(": ");
+        //verify hmac
+        if (!verifyHMAC(msg, hmac, HMACkey)) {
+            console.error('HMAC verification failed.');
+            return;
+        }
         let decryptedMessage;
         if (sender == username){
             return;
@@ -160,8 +192,9 @@
         const publicKey_receiver = await fetchPublicKey(receiver);  // Fetch the receiver's public key from server
         const publicKey_sender = await fetchPublicKey(sender);  // Fetch the sender's public key from server
         const encryptedMessage = await encryptMessage(publicKey_receiver, message);
+        const hmac = CryptoJS.HmacSHA256(encryptedMessage, HMACkey).toString();
         const encryptedMessage_sender = await encryptMessage(publicKey_sender, message);
-        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,room_id);
+        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,hmac,room_id);
     };
 
     // Function to fetch public key from server
@@ -178,6 +211,10 @@
     async function loadAndDisplayMessages(username, chatPartner) {
         try {
             const response = await fetch(`/messages/${username}/${chatPartner}.json`);
+            if (!response.ok || response.status !== 200) {
+                console.log('No existing messages or failed to load messages.');
+                return; // Exit the function if there's no messages or an error occurred
+            }
             const messages = await response.json();
 
             for (const message of messages) {
@@ -190,10 +227,11 @@
         } catch (error) {
             console.error('Error loading or decrypting messages:', error);
         }
-    }
+    };
 
     function join_room() {
         let receiver = $("#receiver").val();
+        console.log(receiver);
         socket.emit("join", username, receiver, (res) => {
             if (typeof res != "number") {
                 alert(res);
@@ -204,7 +242,6 @@
             $("#chat_box").hide();
             $("#input_box").show();
         });
-
         loadAndDisplayMessages(username, receiver);
     };
 
@@ -214,7 +251,7 @@
         socket.emit("leave", username, room_id);
         $("#input_box").hide();
         $("#chat_box").show();
-    }
+    };
 
     function add_message(message, color) {
         let box = $("#message_box");
@@ -393,6 +430,11 @@ function acceptRequest(requestUsername) {
                 alert("Error processing request.");
             }
         });
+    }
+
+    function verifyHMAC(message, receivedHmac, secretKey) {
+        const generatedHmac = CryptoJS.HmacSHA256(message, secretKey).toString(CryptoJS.enc.Hex);
+        return generatedHmac === receivedHmac;
     }
 </script>
 {% endblock %}

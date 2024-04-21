@@ -26,6 +26,7 @@ import os
 # log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
+'''
 cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
 cert_path = os.path.join(cert_dir, 'localhost.crt')
 key_path = os.path.join(cert_dir, 'localhost.key')
@@ -35,6 +36,7 @@ app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https' 
 app.config['SSL_CERT_PATH'] = cert_path
 app.config['SSL_KEY_PATH'] = key_path
+'''
 socketio = SocketIO(app)
 
 # don't remove this!!
@@ -138,7 +140,8 @@ def get_messages(username, chatPartner):
     try:
         return send_from_directory(directory, filename)
     except FileNotFoundError:
-        abort(404, description="Resource not found")
+        # return a empty json file if the file does not exist
+        return jsonify([])
 
 # home page, where the messaging app is
 @app.route("/home")
@@ -228,5 +231,5 @@ def test_models():
 
 
 if __name__ == '__main__':
-
-     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
+    socketio.run(app)
+    #socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))

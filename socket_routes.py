@@ -65,7 +65,7 @@ def encrypt_data(key, data):
     return encrypted_data
 
 @socketio.on("send")
-def send(username, message,encryptedMessage_sender, room_id):
+def send(username, message,encryptedMessage_sender,hmac, room_id):
     users = room.get_users(room_id)
     if username == users[0]:
         sender = users[0]
@@ -74,7 +74,7 @@ def send(username, message,encryptedMessage_sender, room_id):
         sender = users[1]
         receiver = users[0]
     # send the message
-    emit("incoming_message", (f"{username}: {message}"), to=room_id)
+    emit("incoming_message", (f"{username}: {message}"),hmac,to=room_id)
     
     # save file 
     file_path_sender = f"messages/{username}/{receiver}.json"
@@ -120,16 +120,18 @@ def join(sender_name, receiver_name):
         return "Unknown sender!"
 
     room_id = room.get_room_id(receiver_name)
+    print(f"Room ID: {room_id}")
 
     # if the user is already inside of a room 
     if room_id is not None:
-        
         room.join_room(sender_name, room_id)
         join_room(room_id)
+        print("Need to HMAC initialize")
         # emit to everyone in the room except the sender
         emit("incoming", (f"{sender_name} has joined the room.", "green"), to=room_id, include_self=False)
         # emit only to the sender
         emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"))
+        emit("HMAC initialize")
         return room_id
 
     # if the user isn't inside of any room, 
@@ -146,3 +148,8 @@ def leave(username, room_id):
     emit("incoming", (f"{username} has left the room.", "red"), to=room_id)
     leave_room(room_id)
     room.leave_room(username)
+
+# event handler for hmac 
+@socketio.on("HMAC_key")
+def hmac_key(hmac_key, room_id):
+    emit("HMACkey_incoming", hmac_key, to=room_id,include_self=False)

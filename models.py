@@ -89,6 +89,7 @@ class User(Base):
 
         self.friends.append(friend) 
         friend.friends.append(self) 
+        self.received_requests.remove(friend)
         session.commit()
         return "Friend added successfully."
 
