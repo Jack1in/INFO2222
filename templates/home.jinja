@@ -206,18 +206,13 @@
     async function loadAndDisplayMessages(username, chatPartner) {
         try {
             // load password from local storage
-            const password = localStorage.getItem(username + "_password");
-            console.log(username + "_password")
-            // Hash the password
-            console.log("password in load: ", password);
-            const hashedPassword = CryptoJS.SHA256(password).toString();
-            console.log("hashedPassword in load: ", hashedPassword);
+            let sessionKey = sessionStorage.getItem('sessionKey');
             const requestData = {
                 username: username,
                 chatPartner: chatPartner,
-                hashedPassword: hashedPassword
+                sessionKey: sessionKey
             };
-
+            
             const response = await fetch("/request_history", {
                 method: "POST",
                 headers: {
@@ -354,7 +349,7 @@
     
 function send_friend_request() {
     let friend_username = $("#friend_username").val();
-    sessionKey = sessionStorage.getItem(username);
+    sessionKey = sessionStorage.getItem('sessionKey');
     $.ajax({
         url: "/send_request",
         type: "POST",
@@ -370,11 +365,12 @@ function send_friend_request() {
 }
 
 function acceptRequest(requestUsername) {
+    let sessionKey = sessionStorage.getItem('sessionKey');
     $.ajax({
         url: "/accept_friend_request",
         type: "POST",
         contentType: "application/json",
-        data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}"}),
+        data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}",sessionKey: sessionKey}),
         success: function(response) {
             if (response.result === "Friend added successfully.") {
                 let friendsList = document.getElementById('friends_list');
@@ -399,11 +395,12 @@ function acceptRequest(requestUsername) {
 }
 
     function rejectRequest(requestUsername) {
+        let sessionKey = sessionStorage.getItem('sessionKey');
         $.ajax({
             url: "/reject_friend_request",
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}"}),
+            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}",sessionKey: sessionKey}),
             success: function(response) {
                 if (response.result === "Friend request rejected.") {
                     $(`#request-${requestUsername}`).remove();
@@ -417,6 +414,12 @@ function acceptRequest(requestUsername) {
             }
         });
     }
+
+window.onbeforeunload = function() {
+    const username = "{{ username|escape }}";
+    const data = JSON.stringify({username: username});
+    navigator.sendBeacon('/logout', data);
+};
 
 </script>
 {% endblock %}

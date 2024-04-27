@@ -73,7 +73,8 @@ def login_user():
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
         session_key = secrets.token_hex()
         session[username] = session_key
-        home_url = url_for('home')
+        print(session)
+        home_url = url_for('home', username=request.json.get("username"),sessionKey=session_key)
         return jsonify({"home_url": home_url, "session_key": session_key}), 200
     else:
         return "Error: Password does not match!"
@@ -97,7 +98,7 @@ def signup_user():
     if db.get_user(username) is None:
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         db.insert_user(username, hashed_password,publicKey)
-        return url_for('home', username=username)
+        return url_for('login')
     return "Error: User already exists!"
 
 @app.route('/api/public-keys/<username>', methods=['GET'])
@@ -124,20 +125,20 @@ def page_not_found(_):
 def request_history():
     try:
         data = request.get_json()
-
         username = data.get("username")
+        print(username)
         chat_partner = data.get("chatPartner")
-        hashed_password = data.get("hashedPassword")
-
+        sessionKey = data.get("sessionKey")
+        print(sessionKey)
+        print(session)
         user = db.get_user(username)
         if user is None:
             return jsonify({"error": "User not found"}), 404
-
-        if bcrypt.checkpw(hashed_password.encode('utf-8'), user.password.encode('utf-8')):
-            messages = get_messages(username, chat_partner)
-            return messages
-        else:
-            return jsonify({"error": "Password incorrect"}), 401
+        if sessionKey != session.get(username):
+            return "invalid session key", 404
+        print("request_history")
+        messages = get_messages(username, chat_partner)
+        return messages
     except Exception as e:
         print(e)
         return jsonify({"error": "An error occurred"}), 500
@@ -155,7 +156,10 @@ def get_messages(username, chat_partner):
 @app.route("/home")
 def home():
     username = request.args.get("username")
-    if username is None:
+    print(username)
+    print(request.args.get("sessionKey"))
+    print(session)
+    if request.args.get("sessionKey") != session.get(username):
         return redirect(url_for("login"))
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
@@ -167,12 +171,13 @@ def send_request():
         abort(400)  # Bad request
     sessionKey = request.json.get("sessionKey")
     sender = request.json.get("sender")
-    if sessionKey != session[sender]:
-        return redirect(url_for("login"))
+    if sessionKey != session.get(sender):
+        return "invalid session key"
     receiver = request.json.get("receiver")
     if sender == receiver:
         return jsonify({"result": "You can't send a friend request to yourself!"})
     result = db.send_friend_request(sender, receiver)
+    print(result)
     return jsonify({"result": result})
 
 
@@ -183,6 +188,10 @@ def accept_friend_request():
         abort(400)  # Bad request
     sender = request.json.get("sender")
     receiver = request.json.get("receiver")
+    sessionKey = request.json.get("sessionKey")
+    if sessionKey != session.get(receiver):
+        return jsonify("invalid session key")
+    print("accept_friend_request")
     result = db.accept_friend_request(sender, receiver)
     return jsonify({"result": result})
 
@@ -193,6 +202,9 @@ def reject_friend_request():
         abort(400)  # Bad request
     sender = request.json.get("sender")
     receiver = request.json.get("receiver")
+    sessionKey = request.json.get("sessionKey")
+    if sessionKey != session.get(receiver):
+        return jsonify("invalid session key")
     result = db.reject_friend_request(sender, receiver)
     return jsonify({"result": result})
 
@@ -240,6 +252,14 @@ def test_models():
             "result from sending request": result,
             "result from accepting request": result_accept
         })
+    
+@app.route('/logout', methods=['POST'])
+def logout():
+    if not request.is_json:
+        abort(400)
+    username = request.json.get("username")
+    session.pop(username)
+    return "logged out"
 
 
 if __name__ == '__main__':

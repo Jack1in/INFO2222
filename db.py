@@ -37,11 +37,12 @@ def send_friend_request(sender_username, receiver_username):
     with Session(engine) as session:
         sender = session.get(User, sender_username)
         receiver = session.get(User, receiver_username)
+        print("good?")
         if sender and receiver:
             result = sender.send_request(receiver_username, session)
             session.commit()
             return result
-        return jsonify({"result": "User not found"})
+        return "User not found"
 
 def accept_friend_request(sender_username, receiver_username):
     with Session(engine) as session:
