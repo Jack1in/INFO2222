@@ -232,13 +232,35 @@
             }
 
             const messages = await response.json();
-
+            user_public_key = await fetchPublicKey(username);
+            chatPartner_public_key = await fetchPublicKey(chatPartner);
             for (const message of messages) {
                 const decryptedMessage = await decryptMessage(privateKey, message.message);
-                if (username == message.username)
+                if (username == message.username){
+                    // verify the signature of the message
+                    const hash = forge.md.sha256.create();
+                    hash.update(decryptedMessage, 'utf8');
+                    const messageHash = hash.digest().toHex();
+                    const isValidSignature = await verifySignature(user_public_key, messageHash, message.signature);
+                    if (!isValidSignature) {
+                        console.error("Signature verification failed.");
+                        return; // Optionally handle this case visibly to the user
+                    } 
                     add_message(`${message.username}: ${decryptedMessage}`, "blue");
-                else
+                }
+                else{
+                    // verify the signature of the message
+                    const hash = forge.md.sha256.create();
+                    hash.update(decryptedMessage, 'utf8');
+                    const messageHash = hash.digest().toHex();
+                    const isValidSignature = await verifySignature(chatPartner_public_key, messageHash, message.signature);
+                    if (!isValidSignature) {
+                        console.error("Signature verification failed.");
+                        return; // Optionally handle this case visibly to the user
+                    } 
                     add_message(`${message.username}: ${decryptedMessage}`, "black");
+                
+                }
             }
         } catch (error) {
             console.error('Error loading or decrypting messages:', error);
