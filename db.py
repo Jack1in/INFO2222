@@ -6,7 +6,7 @@ database file, containing all the logic to interface with the sql database
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from models import *
-import bcrypt 
+import bcrypt, jsonify
 from pathlib import Path
 
 # creates the database directory
@@ -41,7 +41,7 @@ def send_friend_request(sender_username, receiver_username):
             result = sender.send_request(receiver_username, session)
             session.commit()
             return result
-        return None
+        return jsonify({"result": "User not found"})
 
 def accept_friend_request(sender_username, receiver_username):
     with Session(engine) as session:

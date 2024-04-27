@@ -102,7 +102,8 @@ def join(sender_name, receiver_name):
         return "Unknown sender!"
     
     friends = db.get_friends_list(sender_name)
-    if receiver not in friends:
+    print(friends)
+    if receiver_name not in friends:
         return "You can only chat with friends!"
 
     room_id = room.get_room_id(receiver_name)
