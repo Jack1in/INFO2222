@@ -133,48 +133,38 @@
         add_message(msg, color);
     });
     
-    // when an incoming message arrives, we'll add the message to the message box
-    socket.on("HMAC initialize", async () => {
-        HMACkey = generateHMACKey();
-        const receiver = $("#receiver").val();
-        try {
-            const publicKey_receiver = await fetchPublicKey(receiver);
-            const encryptedHMACkey = await encryptMessage(publicKey_receiver, HMACkey);
-            console.log("sending hmac key", encryptedHMACkey);
-            socket.emit("HMAC_key", encryptedHMACkey, room_id); // send an object with encrypted HMAC key and room_id
-        } catch (error) {
-            console.error('Error during HMAC key initialization:', error);
-        }
-    });
-
-    socket.on("HMACkey_incoming", async (data) => {
-        try {
-            console.log("receiving hmac key", data.encryptedHMACkey);
-            const decryptedHMACkey = await decryptMessage(privateKey, data.encryptedHMACkey);
-            HMACkey = decryptedHMACkey;
-        } catch (error) {
-            console.error('Error during HMAC key decryption:', error);
-        }
-    });
 
 
 
     // normal incoming message event
     // an incoming message arrives, we'll add the message to the message box
-    socket.on("incoming_message", async (encryptedMsg, color = "black",hmac) => {
+    socket.on("incoming_message", async (data, color = "black") => {
         
-        const [sender, msg] = encryptedMsg.split(": ");
-        //verify hmac
-        if (!verifyHMAC(msg, hmac, HMACkey)) {
-            console.error('HMAC verification failed.');
+        const parts = data.split(": ");
+        if (parts.length < 3) {
+            console.error("Received malformed message.");
             return;
         }
-        let decryptedMessage;
-        if (sender == username){
-            return;
+
+        const sender = parts[0];
+        const encryptedMsg = parts[1];
+        const signature = parts[2];
+        decryptedMessage = await decryptMessage(privateKey, encryptedMsg);
+
+        // verify the signature of the message
+        const hash = forge.md.sha256.create();
+        hash.update(decryptedMessage, 'utf8');
+        const messageHash = hash.digest().toHex();
+
+        const publicKey_sender = await fetchPublicKey(sender);
+        const isValidSignature = await verifySignature(publicKey_sender, messageHash, signature);
+        
+        if (!isValidSignature) {
+            console.error("Signature verification failed.");
+            return; // Optionally handle this case visibly to the user
         }
-        decryptedMessage = await decryptMessage(privateKey, msg);
-        // make the message as sende_name: message
+
+        // make the message as sender_name: message
         decryptedMessage = `${sender}: ${decryptedMessage}`;
         add_message(decryptedMessage, color);
     });
@@ -188,13 +178,20 @@
         add_message(local_message, "blue");
         const sender = username;
         const receiver = $("#receiver").val();
+
+        // Encryption of the message
         const publicKey_receiver = await fetchPublicKey(receiver);  // Fetch the receiver's public key from server
         const publicKey_sender = await fetchPublicKey(sender);  // Fetch the sender's public key from server
         const encryptedMessage = await encryptMessage(publicKey_receiver, message);
         const encryptedMessage_sender = await encryptMessage(publicKey_sender, message);
-        console.log("encryptedMessage", encryptedMessage);
-        console.log("encryptedMessage_sender", encryptedMessage_sender);
-        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,room_id);
+
+        // Signature of the message
+        const hash = forge.md.sha256.create();
+        hash.update(message, 'utf8');
+        const messageHash = hash.digest().toHex();
+        const signature = await signMessage(privateKey, messageHash);
+
+        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,signature,room_id);
     };
 
     // Function to fetch public key from server
@@ -289,9 +286,16 @@
         }
     };
 
+    async function signMessage(privateKeyPem, messageHash) {
+        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+        const signature = privateKey.sign(forge.md.sha256.create().update(messageHash, 'utf8'));
+        return forge.util.encode64(signature);
+    }
 
-    function generateHMACKey() {
-        return crypto.getRandomValues(new Uint8Array(16)).reduce((acc, i) => acc + ('0' + i.toString(16)).slice(-2), '');
+    async function verifySignature(publicKeyPem, messageHash, signature) {
+        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+        const signatureBytes = forge.util.decode64(signature);
+        return publicKey.verify(forge.md.sha256.create().update(messageHash, 'utf8').digest().getBytes(), signatureBytes);
     }
 
     function getPrivateKey(username) {
@@ -333,7 +337,7 @@ function acceptRequest(requestUsername) {
             if (response.result === "Friend added successfully.") {
                 $('#friends_list').append(`<li>${requestUsername}</li>`);
                 if ($('#friends_list li').length === 1) {
-                    $('#no_friends_msg').remove();  // 如果这是第一个好友，删除"No friends yet"消息
+                    $('#no_friends_msg').remove(); 
                 }
                 $(`#request-${requestUsername}`).remove();
                 alert("Friend request accepted.");

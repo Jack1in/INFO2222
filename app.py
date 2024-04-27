@@ -120,12 +120,15 @@ def get_messages(username, chatPartner):
     return send_from_directory(directory, filename)
 
 # home page, where the messaging app is
-# home page, where the messaging app is
 @app.route("/home")
 def home():
-    if request.args.get("username") is None:
+    username = request.args.get("username")
+    if not username:
         abort(404)
-    return render_template("home.jinja", username=request.args.get("username"))
+    friend_requests = db.get_friend_requests(username)
+    friends_list = db.get_friends_list(username)
+    print("Data passed to template - Friend Requests:", friend_requests)  # Debugging line
+    return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list)
 
 @app.route("/send_request", methods=["POST"])
 def send_request():

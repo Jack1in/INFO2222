@@ -44,7 +44,7 @@ def disconnect():
     room.leave_room(username)
 
 @socketio.on("send")
-def send(username, message,encryptedMessage_sender, room_id):
+def send(username, message,encryptedMessage_sender,signature,room_id):
     users = room.get_users(room_id)
     if username == users[0]:
         sender = users[0]
@@ -53,7 +53,7 @@ def send(username, message,encryptedMessage_sender, room_id):
         sender = users[1]
         receiver = users[0]
     # send the message
-    emit("incoming_message", (f"{username}: {message}"),to=room_id)
+    emit("incoming_message", (f"{username}: {message}: {signature}"),to=room_id, include_self=False)
     
     # save file 
     file_path_sender = f"messages/{username}/{receiver}.json"
