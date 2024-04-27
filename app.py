@@ -154,7 +154,9 @@ def get_messages(username, chat_partner):
 # home page, where the messaging app is
 @app.route("/home")
 def home():
-    username = session["username"]
+    username = request.args.get("username")
+    if username is None:
+        return redirect(url_for("login"))
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
     return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list)
