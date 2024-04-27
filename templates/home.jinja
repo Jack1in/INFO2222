@@ -83,20 +83,20 @@
     </section>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
 <script src="/static/js/libs/socket.io.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/static/js/libs/js.cookie.min.js"></script>
 <script>
     let privateKey;
     async function initialize() {
-        let username = "{{ username }}";
         try {
-            privateKey = await getPrivateKey(username);
+            privateKey = await getPrivateKey();
         } catch (error) {
             console.error('Failed to get private key:', error);
             return;
         }
+
+        let username = "{{ username }}";
     }
 
     $("#message").on("keyup", (e) => {
@@ -125,46 +125,25 @@
 
     let username = "{{ username }}";
     Cookies.set('username', username);
-    
     const socket = io();
 
+
     // normal incoming message event
+    // when an incoming message arrives, we'll add the message to the message box
     socket.on("incoming", (msg, color="black") => {
         add_message(msg, color);
     });
-    
 
 
-
-    // normal incoming message event
     // an incoming message arrives, we'll add the message to the message box
-    socket.on("incoming_message", async (data, color = "black") => {
-        
-        const parts = data.split(": ");
-        if (parts.length < 3) {
-            console.error("Received malformed message.");
+    socket.on("incoming_message", async (encryptedMsg, color = "black") => {
+        const [sender, msg] = encryptedMsg.split(": ");
+        let decryptedMessage;
+        if (sender == username){
             return;
         }
-
-        const sender = parts[0];
-        const encryptedMsg = parts[1];
-        const signature = parts[2];
-        decryptedMessage = await decryptMessage(privateKey, encryptedMsg);
-
-        // verify the signature of the message
-        const hash = forge.md.sha256.create();
-        hash.update(decryptedMessage, 'utf8');
-        const messageHash = hash.digest().toHex();
-
-        const publicKey_sender = await fetchPublicKey(sender);
-        const isValidSignature = await verifySignature(publicKey_sender, messageHash, signature);
-        
-        if (!isValidSignature) {
-            console.error("Signature verification failed.");
-            return; // Optionally handle this case visibly to the user
-        }
-
-        // make the message as sender_name: message
+        decryptedMessage = await decryptMessage(privateKey, msg);
+        // make the message as sende_name: message
         decryptedMessage = `${sender}: ${decryptedMessage}`;
         add_message(decryptedMessage, color);
     });
@@ -178,20 +157,11 @@
         add_message(local_message, "blue");
         const sender = username;
         const receiver = $("#receiver").val();
-
-        // Encryption of the message
         const publicKey_receiver = await fetchPublicKey(receiver);  // Fetch the receiver's public key from server
         const publicKey_sender = await fetchPublicKey(sender);  // Fetch the sender's public key from server
         const encryptedMessage = await encryptMessage(publicKey_receiver, message);
         const encryptedMessage_sender = await encryptMessage(publicKey_sender, message);
-
-        // Signature of the message
-        const hash = forge.md.sha256.create();
-        hash.update(message, 'utf8');
-        const messageHash = hash.digest().toHex();
-        const signature = await signMessage(privateKey, messageHash);
-
-        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,signature,room_id);
+        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,room_id);
     };
 
     // Function to fetch public key from server
@@ -208,12 +178,13 @@
     async function loadAndDisplayMessages(username, chatPartner) {
         try {
             const response = await fetch(`/messages/${username}/${chatPartner}.json`);
-            if (!response.ok || response.status !== 200) {
-                console.log('No existing messages or failed to load messages.');
-                return; // Exit the function if there's no messages or an error occurred
+            if (!response.ok) {
+                console.error('No messages found or could not load messages:', response.statusText);
+                let messageBox = document.getElementById('message_box');
+                messageBox.innerHTML = '<p>No previous messages or conversation is new.</p>'; // Clear previous messages and show info
+                return;
             }
             const messages = await response.json();
-
             for (const message of messages) {
                 const decryptedMessage = await decryptMessage(privateKey, message.message);
                 if(username == message.username)
@@ -224,34 +195,40 @@
         } catch (error) {
             console.error('Error loading or decrypting messages:', error);
         }
-    };
+    }
+    
+    
 
     function join_room() {
+        console.log("Attempting to join room...");
+        console.log("Socket.io connection status:", socket.connected);
         let receiver = $("#receiver").val();
-        console.log(username);
-        console.log(receiver);
-        // remove everything in chat box
-        $("#message_box").empty();
+        if (!receiver) {
+            alert("Please enter a receiver name.");
+            return;
+        }
         socket.emit("join", username, receiver, (res) => {
-            if (typeof res != "number") {
-                alert(res);
+            console.log("Response from server after attempting to join room:", res);
+            if (typeof res === "object" && res.status === "error") {
+                console.error("Failed to join room:", res.message);
+                alert(`Failed to join room: ${res.message}`);
                 return;
             }
-            room_id = res;
+            console.log("Joined room successfully with room ID:", res.room_id);
+            room_id = res.room_id;
             Cookies.set("room_id", room_id);
             $("#chat_box").hide();
             $("#input_box").show();
         });
-        // loadAndDisplayMessages(username, receiver);
-    };
-
-
+        
+    }
+    
     function leave() {
         Cookies.remove("room_id");
         socket.emit("leave", username, room_id);
         $("#input_box").hide();
         $("#chat_box").show();
-    };
+    }
 
     function add_message(message, color) {
         let box = $("#message_box");
@@ -260,55 +237,114 @@
     };
 
     // function to encrypt a message
-    async function encryptMessage(publicKeyPem, message) {
+    // function to encrypt a message
+    async function encryptMessage(publicKey, message) {
+        const enc = new TextEncoder();
+        const publicKeyBuffer = new Uint8Array(atob(publicKey).split('').map(char => char.charCodeAt(0)));
+        const importedKey = await window.crypto.subtle.importKey(
+            "spki",
+            publicKeyBuffer,
+            {
+                name: "RSA-OAEP",
+                hash: "SHA-256",
+            },
+            false,
+            ["encrypt"]
+        );
+
+        const encrypted = await window.crypto.subtle.encrypt(
+            { name: "RSA-OAEP" },
+            importedKey,
+            enc.encode(message)
+        );
+        
+        return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+    };
+
+
+        // function to decrypt a message
+    async function decryptMessage(privateKey, encryptedMessageBase64) {
+        console.log("privateKey", privateKey);
+        console.log("encryptedMessage", encryptedMessageBase64);
+        const dec = new TextDecoder();
+        let encryptedMessage;
+        let importedKey;
+        try {
+            importedKey = await window.crypto.subtle.importKey(
+                "pkcs8",
+                privateKey,
+                {
+                    name: "RSA-OAEP",
+                    hash: "SHA-256",
+                },
+                false,
+                ["decrypt"]
+            );
+        } catch (error) {
+            console.error('Failed to import private key:', error);
+            throw error;
+        }
         try{
-            const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
-            const buffer = forge.util.createBuffer(message, 'utf8');
-            const encrypted = publicKey.encrypt(buffer.getBytes(), 'RSA-OAEP');
-            return forge.util.encode64(encrypted);
+            encryptedMessage = window.atob(encryptedMessageBase64);
         }catch(error){
-            console.log("error caused by encryptMessage");
+            console.log("error caused by atob");
+            throw error;
+        }
+        try {
+            const encryptedMessageArrayBuffer = new Uint8Array(encryptedMessage.length);
+            for (let i = 0; i < encryptedMessage.length; i++) {
+                encryptedMessageArrayBuffer[i] = encryptedMessage.charCodeAt(i);
+            }
+
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: "RSA-OAEP" },
+                importedKey,
+                encryptedMessageArrayBuffer
+            );
+            return dec.decode(new Uint8Array(decrypted));
+        } catch (error) {
+            console.error('Failed to decrypt message error:', error);
             throw error;
         }
     };
 
 
-    // function to decrypt a message
-    async function decryptMessage(privateKeyPem, encryptedMessageBase64) {
-        try{
-            const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
-            const encrypted = forge.util.decode64(encryptedMessageBase64);
-            const decrypted = privateKey.decrypt(encrypted, 'RSA-OAEP');
-            return decrypted;
-        }catch(error){
-            console.log("error caused by decryptMessage");
-            throw error;
-        }
-    };
-
-    async function signMessage(privateKeyPem, messageHash) {
-        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
-        const signature = privateKey.sign(forge.md.sha256.create().update(messageHash, 'utf8'));
-        return forge.util.encode64(signature);
+    function generateHMACKey() {
+        return crypto.getRandomValues(new Uint8Array(16)).reduce((acc, i) => acc + ('0' + i.toString(16)).slice(-2), '');
     }
 
-    async function verifySignature(publicKeyPem, messageHash, signature) {
-        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
-        const signatureBytes = forge.util.decode64(signature);
-        return publicKey.verify(forge.md.sha256.create().update(messageHash, 'utf8').digest().getBytes(), signatureBytes);
-    }
+    async function getPrivateKey() {
+        return new Promise((resolve, reject) => {
+            // open the database
+            const dbRequest = window.indexedDB.open("KeyStore", 1);
 
-    function getPrivateKey(username) {
-        // Attempt to retrieve the private key from localStorage
-        const privateKey = localStorage.getItem(username + "_privateKey");
-        if (privateKey) {
-            console.log("Private key retrieved successfully.", privateKey);
-            return privateKey; // Return the private key
-        } else {
-            console.log("No private key found.");
-            return null; // No private key found
-        }
-    }
+            dbRequest.onerror = function(event) {
+                console.error("Database error: ", event.target.errorCode);
+                reject("Failed to open IndexedDB.");
+            };
+
+            dbRequest.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(["keys"], "readonly");
+                const store = transaction.objectStore("keys");
+                const getRequest = store.get(1);  
+                getRequest.onerror = function(event) {
+                    console.error("Error fetching private key:", event.target.errorCode);
+                    reject("Failed to retrieve the private key.");
+                };
+
+                getRequest.onsuccess = function(event) {
+                    if (getRequest.result) {
+                        console.log("Private key retrieved successfully.");
+                        resolve(getRequest.result.key);  // return the private key
+                    } else {
+                        console.log("No private key found.");
+                        reject("No private key found in the database.");
+                    }
+                };
+            };
+    });
+}
 
     
 function send_friend_request() {
@@ -337,7 +373,7 @@ function acceptRequest(requestUsername) {
             if (response.result === "Friend added successfully.") {
                 $('#friends_list').append(`<li>${requestUsername}</li>`);
                 if ($('#friends_list li').length === 1) {
-                    $('#no_friends_msg').remove(); 
+                    $('#no_friends_msg').remove();  // 如果这是第一个好友，删除"No friends yet"消息
                 }
                 $(`#request-${requestUsername}`).remove();
                 alert("Friend request accepted.");
@@ -370,6 +406,5 @@ function acceptRequest(requestUsername) {
             }
         });
     }
-
 </script>
 {% endblock %}

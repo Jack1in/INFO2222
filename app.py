@@ -26,7 +26,6 @@ import os
 # log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
-'''
 cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
 cert_path = os.path.join(cert_dir, 'localhost.crt')
 key_path = os.path.join(cert_dir, 'localhost.key')
@@ -36,11 +35,32 @@ app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https' 
 app.config['SSL_CERT_PATH'] = cert_path
 app.config['SSL_KEY_PATH'] = key_path
-'''
 socketio = SocketIO(app)
 
 # don't remove this!!
 import socket_routes
+
+# generate a key pair
+def generate_key_pair(password: str):
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+    public_key = private_key.public_key()
+
+    # use the password to encrypt the private key
+    pem_private_key = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.BestAvailableEncryption(password.encode())
+    )
+    # generate the public key
+    pem_public_key = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return pem_private_key, pem_public_key
 
 # index page
 @app.route("/")
@@ -82,11 +102,11 @@ def signup_user():
         abort(404)
     username = request.json.get("username")
     password = request.json.get("password")
-    publicKey = request.json.get("publicKey")
+    public_key = request.json.get("publicKey")
     
     if db.get_user(username) is None:
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        db.insert_user(username, hashed_password,publicKey)
+        db.insert_user(username, hashed_password,public_key)
         return url_for('home', username=username)
     return "Error: User already exists!"
 
@@ -110,14 +130,16 @@ def retrieve_public_key_for_user(username):
 def page_not_found(_):
     return render_template('404.jinja'), 404
 
-@app.route('/messages/<username>/<chatPartner>.json')
-def get_messages(username, chatPartner):
-    directory = os.path.join(app.root_path, 'messages', username)
-    filename = f'{chatPartner}.json'
-    # check if the file exists
-    if not os.path.exists(os.path.join(directory, filename)):
-        return jsonify([])
-    return send_from_directory(directory, filename)
+@app.route('/messages/<username>/<chat_partner>.json', methods=['GET'])
+def get_or_create_message_file(username, chat_partner):
+    file_directory = os.path.join('messages', username)
+    os.makedirs(file_directory, exist_ok=True)
+    file_path = os.path.join(file_directory, f'{chat_partner}.json')
+    if not os.path.exists(file_path):
+        with open(file_path, 'w') as file:
+            json.dump([], file)  # Create an empty list in new JSON file
+    return send_from_directory(file_directory, f'{chat_partner}.json')
+
 
 # home page, where the messaging app is
 @app.route("/home")
@@ -207,5 +229,5 @@ def test_models():
 
 
 if __name__ == '__main__':
-    socketio.run(app)
-    #socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
+
+     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))

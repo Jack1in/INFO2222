@@ -3,9 +3,18 @@ socket_routes
 file containing all the routes related to socket.io
 '''
 
-
+from flask import jsonify
 from flask_socketio import join_room, emit, leave_room
 from flask import request
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
+from cryptography.fernet import Fernet
+from base64 import urlsafe_b64encode
+import os,json,datetime
 
 try:
     from __main__ import socketio
@@ -14,9 +23,20 @@ except ImportError:
 
 from models import Room
 
-import db, os, json, datetime
+import db
 
 room = Room()
+
+def derive_key(password, salt, length=32):
+    # Derive a cryptographic key from a password
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=length,
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    return kdf.derive(password.encode())
 
 # when the client connects to a socket
 # this event is emitted when the io() function is called in JS
@@ -30,7 +50,6 @@ def connect():
     # so on client connect, the room needs to be rejoined
     join_room(int(room_id))
     emit("incoming", (f"{username} has connected", "green"), to=int(room_id))
-
 # event when client disconnects
 # quite unreliable use sparingly
 @socketio.on('disconnect')
@@ -43,8 +62,13 @@ def disconnect():
     leave_room(room_id)
     room.leave_room(username)
 
+def encrypt_data(key, data):
+    f = Fernet(key)
+    encrypted_data = f.encrypt(data.encode())  
+    return encrypted_data
+
 @socketio.on("send")
-def send(username, message,encryptedMessage_sender,signature,room_id):
+def send(username, message,encryptedMessage_sender, room_id):
     users = room.get_users(room_id)
     if username == users[0]:
         sender = users[0]
@@ -53,7 +77,7 @@ def send(username, message,encryptedMessage_sender,signature,room_id):
         sender = users[1]
         receiver = users[0]
     # send the message
-    emit("incoming_message", (f"{username}: {message}: {signature}"),to=room_id, include_self=False)
+    emit("incoming_message", (f"{username}: {message}"), to=room_id)
     
     # save file 
     file_path_sender = f"messages/{username}/{receiver}.json"
@@ -88,37 +112,31 @@ def send(username, message,encryptedMessage_sender,signature,room_id):
     
 # join room event handler
 # sent when the user joins a room
+
 @socketio.on("join")
 def join(sender_name, receiver_name):
-    
+    print(f"Join request from {sender_name} to {receiver_name}")
     receiver = db.get_user(receiver_name)
     if receiver is None:
-        return "Unknown receiver!"
+        return {"status": "error", "message": "Unknown receiver!"}
     
     sender = db.get_user(sender_name)
     if sender is None:
-        return "Unknown sender!"
+        return {"status": "error", "message": "Unknown sender!"}
 
     room_id = room.get_room_id(receiver_name)
-
-    # if the user is already inside of a room 
     if room_id is not None:
-        
         room.join_room(sender_name, room_id)
         join_room(room_id)
-        # emit to everyone in the room except the sender
-        emit("incoming", (f"{sender_name} has joined the room.", "green"), to=room_id, include_self=False)
-        # emit only to the sender
-        emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"))
-        return room_id
+        emit("incoming", {"message": f"{sender_name} has joined the room.", "color": "green"}, to=room_id, include_self=False)
+        return {"status": "success", "room_id": room_id}
 
-    # if the user isn't inside of any room, 
-    # perhaps this user has recently left a room
-    # or is simply a new user looking to chat with someone
     room_id = room.create_room(sender_name, receiver_name)
     join_room(room_id)
-    emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"), to=room_id)
-    return room_id
+    emit("incoming", {"message": f"{sender_name} has joined the room. Now talking to {receiver_name}.", "color": "green"}, to=room_id)
+    print("Emitting join confirmation back to client.")
+    return {"status": "success", "room_id": room_id}
+
 
 # leave room event handler
 @socketio.on("leave")
@@ -126,6 +144,3 @@ def leave(username, room_id):
     emit("incoming", (f"{username} has left the room.", "red"), to=room_id)
     leave_room(room_id)
     room.leave_room(username)
-
-
-
