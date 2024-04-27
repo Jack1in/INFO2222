@@ -111,14 +111,36 @@ def retrieve_public_key_for_user(username):
 def page_not_found(_):
     return render_template('404.jinja'), 404
 
-@app.route('/messages/<username>/<chatPartner>.json')
-def get_messages(username, chatPartner):
+@app.route("/request_history", methods=["POST"])
+def request_history():
+    try:
+        data = request.get_json()
+
+        username = data.get("username")
+        chat_partner = data.get("chatPartner")
+        hashed_password = data.get("hashedPassword")
+
+        user = db.get_user(username)
+        if user is None:
+            return jsonify({"error": "User not found"}), 404
+
+        if bcrypt.checkpw(hashed_password.encode('utf-8'), user.password.encode('utf-8')):
+            messages = get_messages(username, chat_partner)
+            return messages
+        else:
+            return jsonify({"error": "Password incorrect"}), 401
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "An error occurred"}), 500
+
+def get_messages(username, chat_partner):
     directory = os.path.join(app.root_path, 'messages', username)
-    filename = f'{chatPartner}.json'
+    filename = f'{chat_partner}.json'
     # check if the file exists
     if not os.path.exists(os.path.join(directory, filename)):
         return jsonify([])
     return send_from_directory(directory, filename)
+
 
 # home page, where the messaging app is
 @app.route("/home")
@@ -128,7 +150,7 @@ def home():
         abort(404)
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
-    print("Data passed to template - Friend Requests:", friend_requests)  # Debugging line
+    # print("Data passed to template - Friend Requests:", friend_requests)  # Debugging line
     return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list)
 
 @app.route("/send_request", methods=["POST"])

@@ -111,8 +111,6 @@ class User(Base):
             requests = [user.username for user in self.received_requests]
         else:
             raise ValueError("Invalid request type. Choose 'sent' or 'received'.")
-
-        print(f"View Requests ({request_type}):", requests)  # Debugging line
         return requests
 
 

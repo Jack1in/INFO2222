@@ -84,6 +84,7 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
 <script src="/static/js/libs/socket.io.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/static/js/libs/js.cookie.min.js"></script>
@@ -204,16 +205,37 @@
 
     async function loadAndDisplayMessages(username, chatPartner) {
         try {
-            const response = await fetch(`/messages/${username}/${chatPartner}.json`);
+            // load password from local storage
+            const password = localStorage.getItem(username + "_password");
+            console.log(username + "_password")
+            // Hash the password
+            console.log("password in load: ", password);
+            const hashedPassword = CryptoJS.SHA256(password).toString();
+            console.log("hashedPassword in load: ", hashedPassword);
+            const requestData = {
+                username: username,
+                chatPartner: chatPartner,
+                hashedPassword: hashedPassword
+            };
+
+            const response = await fetch("/request_history", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(requestData)
+            });
+
             if (!response.ok || response.status !== 200) {
                 console.log('No existing messages or failed to load messages.');
                 return; // Exit the function if there's no messages or an error occurred
             }
+
             const messages = await response.json();
 
             for (const message of messages) {
                 const decryptedMessage = await decryptMessage(privateKey, message.message);
-                if(username == message.username)
+                if (username == message.username)
                     add_message(`${message.username}: ${decryptedMessage}`, "blue");
                 else
                     add_message(`${message.username}: ${decryptedMessage}`, "black");
@@ -222,6 +244,7 @@
             console.error('Error loading or decrypting messages:', error);
         }
     };
+
 
     function join_room() {
         let receiver = $("#receiver").val();

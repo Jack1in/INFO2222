@@ -28,8 +28,8 @@ def connect():
         return
     # socket automatically leaves a room on client disconnect
     # so on client connect, the room needs to be rejoined
-    join_room(int(room_id))
-    emit("incoming", (f"{username} has connected", "green"), to=int(room_id))
+    leave_room(room_id)
+    room.leave_room(username)
 
 # event when client disconnects
 # quite unreliable use sparingly
@@ -102,7 +102,6 @@ def join(sender_name, receiver_name):
         return "Unknown sender!"
     
     friends = db.get_friends_list(sender_name)
-    print(friends)
     if receiver_name not in friends:
         return "You can only chat with friends!"
 
@@ -110,7 +109,9 @@ def join(sender_name, receiver_name):
 
     # if the user is already inside of a room 
     if room_id is not None:
-        
+        # if the receiver is room with another user
+        if room.get_users(room_id)[0] != sender_name and room.get_users(room_id)[1] != sender_name:
+            return "User is already in a chat with someone else."
         room.join_room(sender_name, room_id)
         join_room(room_id)
         # emit to everyone in the room except the sender
