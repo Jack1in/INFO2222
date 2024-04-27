@@ -8,9 +8,7 @@ from flask import Flask, render_template, request, abort, url_for, jsonify,send_
 import os
 from flask_socketio import SocketIO
 from sqlalchemy.orm import Session
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
+from datetime import timedelta
 import json
 from models import User, Room
 import db
@@ -29,12 +27,18 @@ app = Flask(__name__)
 cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
 cert_path = os.path.join(cert_dir, 'localhost.crt')
 key_path = os.path.join(cert_dir, 'localhost.key')
-# secret key used to sign the session cookie
-app.config['SECRET_KEY'] = secrets.token_hex()
-app.config['SERVER_NAME'] = 'localhost:5000' 
-app.config['PREFERRED_URL_SCHEME'] = 'https' 
 app.config['SSL_CERT_PATH'] = cert_path
 app.config['SSL_KEY_PATH'] = key_path
+# secret key used to sign the session cookie
+app.config['SECRET_KEY'] = 'hello'  # Change this!
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SERVER_NAME'] = 'localhost:5000'
+app.config['PREFERRED_URL_SCHEME'] = 'https'
+
+
 socketio = SocketIO(app)
 
 # don't remove this!!
