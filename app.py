@@ -30,7 +30,7 @@ key_path = os.path.join(cert_dir, 'localhost.key')
 app.config['SSL_CERT_PATH'] = cert_path
 app.config['SSL_KEY_PATH'] = key_path
 # secret key used to sign the session cookie
-app.config['SECRET_KEY'] = 'hello'  # Change this!
+app.config['SECRET_KEY'] = 'nice_secret_ley'
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -67,6 +67,7 @@ def login_user():
     if user is None:
         return "Error: User does not exist!"
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
+        session["token"] = secrets.token_hex()
         session["username"] = username
         return url_for('home')
     else:
