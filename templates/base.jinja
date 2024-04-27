@@ -9,7 +9,9 @@ this is equivalent to a bunch of glob imports -> import * from jquery.
 Yeah I know it's pretty ugly...
 -->
 <!DOCTYPE html>
+{% autoescape true %}
 <html>
+
     <head>
         <title>HTML :)</title> 
         <script src="/static/js/libs/axios.min.js"></script>
@@ -21,3 +23,4 @@ Yeah I know it's pretty ugly...
         {% block content %} {% endblock %}
     </body>
 </html>
+{% endautoescape %}

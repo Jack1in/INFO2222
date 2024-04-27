@@ -80,6 +80,7 @@ def signup():
 def signup_user():
     if not request.is_json:
         abort(404)
+    # alwasy convert to text to avoid xss attacks
     username = request.json.get("username")
     password = request.json.get("password")
     publicKey = request.json.get("publicKey")
@@ -136,6 +137,8 @@ def send_request():
         abort(400)  # Bad request
     sender = request.json.get("sender")
     receiver = request.json.get("receiver")
+    if sender == receiver:
+        return jsonify({"result": "You can't send a friend request to yourself!"})
     result = db.send_friend_request(sender, receiver)
     return jsonify({"result": result})
 

@@ -24,16 +24,16 @@
 <!-- Navbar, displaying the username and friend functionalities -->
 <nav>
     <ol style="float: right">
-        <li style="display:inline-block">Username: {{ username }}</li>
+        <li style="display:inline-block">Username: {{ username|escape }}</li>
     </ol>
     <ul style="float: left">
         <li><strong>Friend Requests:</strong>
             {% if friend_requests %}
                 <ul>
                     {% for request in friend_requests %}
-                        <li id="request-{{ request.username }}">{{ request.username }}
-                            <button onclick="acceptRequest('{{ request.username }}')">Accept</button>
-                            <button onclick="rejectRequest('{{ request.username }}')">Reject</button>
+                        <li id="request-{{ request.username }}">{{ request.username|escape}}
+                            <button onclick="acceptRequest('{{ request.username|escape }}')">Accept</button>
+                            <button onclick="rejectRequest('{{ request.username|escape }}')">Reject</button>
                         </li>
                     {% endfor %}
                 </ul>
@@ -44,7 +44,7 @@
         <li><strong>Friends List:</strong>
             <ul id="friends_list">
                 {% for friend in friends_list %}
-                    <li>{{ friend }}</li>
+                    <li>{{ friend|escape }}</li>
                 {% endfor %}
             </ul>
             {% if not friends_list %}
@@ -90,7 +90,7 @@
 <script>
     let privateKey;
     async function initialize() {
-        let username = "{{ username }}";
+        let username = "{{ username|escape}}";
         try {
             privateKey = await getPrivateKey(username);
         } catch (error) {
@@ -123,7 +123,7 @@
         room_id = parseInt(Cookies.get("room_id"));
     });
 
-    let username = "{{ username }}";
+    let username = "{{ username|escape}}";
     Cookies.set('username', username);
     
     const socket = io();
@@ -132,9 +132,6 @@
     socket.on("incoming", (msg, color="black") => {
         add_message(msg, color);
     });
-    
-
-
 
     // normal incoming message event
     // an incoming message arrives, we'll add the message to the message box
@@ -228,8 +225,6 @@
 
     function join_room() {
         let receiver = $("#receiver").val();
-        console.log(username);
-        console.log(receiver);
         // remove everything in chat box
         $("#message_box").empty();
         socket.emit("join", username, receiver, (res) => {
@@ -253,9 +248,11 @@
     };
 
     function add_message(message, color) {
-        let box = $("#message_box");
-        let child = $(`<p style="color:${color}; margin: 0px;"></p>`).text(message);
-        box.append(child);
+        let box = document.getElementById("message_box");
+        let child = document.createElement("p");
+        child.style.color = color;
+        child.textContent = message;
+        box.appendChild(child);
     };
 
     // function to encrypt a message
@@ -299,6 +296,7 @@
     function getPrivateKey(username) {
         // Attempt to retrieve the private key from localStorage
         const privateKey = localStorage.getItem(username + "_privateKey");
+        console.log(username + "_privateKey");
         if (privateKey) {
             console.log("Private key retrieved successfully.", privateKey);
             return privateKey; // Return the private key
@@ -315,7 +313,7 @@ function send_friend_request() {
         url: "/send_request",
         type: "POST",
         contentType: "application/json",
-        data: JSON.stringify({ sender: "{{ username }}", receiver: friend_username }),
+        data: JSON.stringify({ sender: "{{ username|escape }}", receiver: friend_username }),
         success: function(response) {
             alert("Request status: " + response.result);
         },
@@ -330,14 +328,19 @@ function acceptRequest(requestUsername) {
         url: "/accept_friend_request",
         type: "POST",
         contentType: "application/json",
-        data: JSON.stringify({ sender: requestUsername, receiver: "{{ username }}"}),
+        data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}"}),
         success: function(response) {
             if (response.result === "Friend added successfully.") {
-                $('#friends_list').append(`<li>${requestUsername}</li>`);
-                if ($('#friends_list li').length === 1) {
-                    $('#no_friends_msg').remove(); 
+                let friendsList = document.getElementById('friends_list');
+                let newFriend = document.createElement('li');
+                newFriend.textContent = requestUsername; 
+                friendsList.appendChild(newFriend);
+                if (friendsList.children.length === 1) {
+                    let noFriendsMsg = document.getElementById('no_friends_msg');
+                    if (noFriendsMsg) noFriendsMsg.parentNode.removeChild(noFriendsMsg);
                 }
-                $(`#request-${requestUsername}`).remove();
+                let requestItem = document.getElementById(`request-${requestUsername}`);
+                if (requestItem) requestItem.parentNode.removeChild(requestItem);
                 alert("Friend request accepted.");
             } else {
                 alert(response.result);
@@ -354,7 +357,7 @@ function acceptRequest(requestUsername) {
             url: "/reject_friend_request",
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username }}"}),
+            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}"}),
             success: function(response) {
                 if (response.result === "Friend request rejected.") {
                     $(`#request-${requestUsername}`).remove();
