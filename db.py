@@ -71,9 +71,6 @@ def get_friend_requests(username: str) -> List[dict]:
             return requests
         return []
 
-
-
-
 def get_friends_list(username: str):
     with Session(engine) as session:
         user = session.get(User, username)

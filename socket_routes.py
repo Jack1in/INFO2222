@@ -6,15 +6,6 @@ file containing all the routes related to socket.io
 
 from flask_socketio import join_room, emit, leave_room
 from flask import request
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
-from cryptography.fernet import Fernet
-from base64 import urlsafe_b64encode
-import os,json,datetime
 
 try:
     from __main__ import socketio
@@ -23,20 +14,9 @@ except ImportError:
 
 from models import Room
 
-import db
+import db, os, json, datetime
 
 room = Room()
-
-def derive_key(password, salt, length=32):
-    # Derive a cryptographic key from a password
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=length,
-        salt=salt,
-        iterations=100000,
-        backend=default_backend()
-    )
-    return kdf.derive(password.encode())
 
 # when the client connects to a socket
 # this event is emitted when the io() function is called in JS
@@ -44,8 +24,12 @@ def derive_key(password, salt, length=32):
 def connect():
     username = request.cookies.get("username")
     room_id = request.cookies.get("room_id")
-    leave_room(room_id)
-    room.leave_room(username)
+    if room_id is None or username is None:
+        return
+    # socket automatically leaves a room on client disconnect
+    # so on client connect, the room needs to be rejoined
+    join_room(int(room_id))
+    emit("incoming", (f"{username} has connected", "green"), to=int(room_id))
 
 # event when client disconnects
 # quite unreliable use sparingly
@@ -59,13 +43,8 @@ def disconnect():
     leave_room(room_id)
     room.leave_room(username)
 
-def encrypt_data(key, data):
-    f = Fernet(key)
-    encrypted_data = f.encrypt(data.encode())  
-    return encrypted_data
-
 @socketio.on("send")
-def send(username, message,encryptedMessage_sender,hmac, room_id):
+def send(username, message,encryptedMessage_sender, room_id):
     users = room.get_users(room_id)
     if username == users[0]:
         sender = users[0]
@@ -74,7 +53,7 @@ def send(username, message,encryptedMessage_sender,hmac, room_id):
         sender = users[1]
         receiver = users[0]
     # send the message
-    emit("incoming_message", (f"{username}: {message}",hmac),to=room_id)
+    emit("incoming_message", (f"{username}: {message}"),to=room_id)
     
     # save file 
     file_path_sender = f"messages/{username}/{receiver}.json"
@@ -111,6 +90,7 @@ def send(username, message,encryptedMessage_sender,hmac, room_id):
 # sent when the user joins a room
 @socketio.on("join")
 def join(sender_name, receiver_name):
+    
     receiver = db.get_user(receiver_name)
     if receiver is None:
         return "Unknown receiver!"
@@ -120,18 +100,16 @@ def join(sender_name, receiver_name):
         return "Unknown sender!"
 
     room_id = room.get_room_id(receiver_name)
-    print(f"Room ID: {room_id}")
 
     # if the user is already inside of a room 
     if room_id is not None:
+        
         room.join_room(sender_name, room_id)
         join_room(room_id)
-        print("Need to HMAC initialize")
         # emit to everyone in the room except the sender
         emit("incoming", (f"{sender_name} has joined the room.", "green"), to=room_id, include_self=False)
         # emit only to the sender
         emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"))
-        emit("HMAC initialize")
         return room_id
 
     # if the user isn't inside of any room, 
@@ -149,7 +127,5 @@ def leave(username, room_id):
     leave_room(room_id)
     room.leave_room(username)
 
-# event handler for hmac 
-@socketio.on("HMAC_key")
-def hmac_key(hmac_key, room_id):
-    emit("HMACkey_incoming", hmac_key, to=room_id,include_self=False)
+
+

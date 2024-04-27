@@ -83,22 +83,20 @@
     </section>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
 <script src="/static/js/libs/socket.io.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/static/js/libs/js.cookie.min.js"></script>
 <script>
     let privateKey;
-    let HMACkey;
     async function initialize() {
+        let username = "{{ username }}";
         try {
-            privateKey = await getPrivateKey();
+            privateKey = await getPrivateKey(username);
         } catch (error) {
             console.error('Failed to get private key:', error);
             return;
         }
-
-        let username = "{{ username }}";
     }
 
     $("#message").on("keyup", (e) => {
@@ -127,6 +125,7 @@
 
     let username = "{{ username }}";
     Cookies.set('username', username);
+    
     const socket = io();
 
     // normal incoming message event
@@ -192,9 +191,10 @@
         const publicKey_receiver = await fetchPublicKey(receiver);  // Fetch the receiver's public key from server
         const publicKey_sender = await fetchPublicKey(sender);  // Fetch the sender's public key from server
         const encryptedMessage = await encryptMessage(publicKey_receiver, message);
-        const hmac = CryptoJS.HmacSHA256(encryptedMessage, HMACkey).toString();
         const encryptedMessage_sender = await encryptMessage(publicKey_sender, message);
-        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,hmac,room_id);
+        console.log("encryptedMessage", encryptedMessage);
+        console.log("encryptedMessage_sender", encryptedMessage_sender);
+        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,room_id);
     };
 
     // Function to fetch public key from server
@@ -231,6 +231,7 @@
 
     function join_room() {
         let receiver = $("#receiver").val();
+        console.log(username);
         console.log(receiver);
         // remove everything in chat box
         $("#message_box").empty();
@@ -244,7 +245,7 @@
             $("#chat_box").hide();
             $("#input_box").show();
         });
-        loadAndDisplayMessages(username, receiver);
+        // loadAndDisplayMessages(username, receiver);
     };
 
 
@@ -262,73 +263,28 @@
     };
 
     // function to encrypt a message
-    // function to encrypt a message
-    async function encryptMessage(publicKey, message) {
-        const enc = new TextEncoder();
-        const publicKeyBuffer = new Uint8Array(atob(publicKey).split('').map(char => char.charCodeAt(0)));
-        const importedKey = await window.crypto.subtle.importKey(
-            "spki",
-            publicKeyBuffer,
-            {
-                name: "RSA-OAEP",
-                hash: "SHA-256",
-            },
-            false,
-            ["encrypt"]
-        );
-
-        const encrypted = await window.crypto.subtle.encrypt(
-            { name: "RSA-OAEP" },
-            importedKey,
-            enc.encode(message)
-        );
-        
-        return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+    async function encryptMessage(publicKeyPem, message) {
+        try{
+            const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+            const buffer = forge.util.createBuffer(message, 'utf8');
+            const encrypted = publicKey.encrypt(buffer.getBytes(), 'RSA-OAEP');
+            return forge.util.encode64(encrypted);
+        }catch(error){
+            console.log("error caused by encryptMessage");
+            throw error;
+        }
     };
 
 
     // function to decrypt a message
-    async function decryptMessage(privateKey, encryptedMessageBase64) {
-        console.log("privateKey", privateKey);
-        console.log("encryptedMessage", encryptedMessageBase64);
-        const dec = new TextDecoder();
-        let encryptedMessage;
-        let importedKey;
-        try {
-            importedKey = await window.crypto.subtle.importKey(
-                "pkcs8",
-                privateKey,
-                {
-                    name: "RSA-OAEP",
-                    hash: "SHA-256",
-                },
-                false,
-                ["decrypt"]
-            );
-        } catch (error) {
-            console.error('Failed to import private key:', error);
-            throw error;
-        }
+    async function decryptMessage(privateKeyPem, encryptedMessageBase64) {
         try{
-            encryptedMessage = window.atob(encryptedMessageBase64);
+            const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+            const encrypted = forge.util.decode64(encryptedMessageBase64);
+            const decrypted = privateKey.decrypt(encrypted, 'RSA-OAEP');
+            return decrypted;
         }catch(error){
-            console.log("error caused by atob");
-            throw error;
-        }
-        try {
-            const encryptedMessageArrayBuffer = new Uint8Array(encryptedMessage.length);
-            for (let i = 0; i < encryptedMessage.length; i++) {
-                encryptedMessageArrayBuffer[i] = encryptedMessage.charCodeAt(i);
-            }
-
-            const decrypted = await window.crypto.subtle.decrypt(
-                { name: "RSA-OAEP" },
-                importedKey,
-                encryptedMessageArrayBuffer
-            );
-            return dec.decode(new Uint8Array(decrypted));
-        } catch (error) {
-            console.error('Failed to decrypt message error:', error);
+            console.log("error caused by decryptMessage");
             throw error;
         }
     };
@@ -338,38 +294,17 @@
         return crypto.getRandomValues(new Uint8Array(16)).reduce((acc, i) => acc + ('0' + i.toString(16)).slice(-2), '');
     }
 
-    async function getPrivateKey() {
-        return new Promise((resolve, reject) => {
-            // open the database
-            const dbRequest = window.indexedDB.open("KeyStore", 1);
-
-            dbRequest.onerror = function(event) {
-                console.error("Database error: ", event.target.errorCode);
-                reject("Failed to open IndexedDB.");
-            };
-
-            dbRequest.onsuccess = function(event) {
-                const db = event.target.result;
-                const transaction = db.transaction(["keys"], "readonly");
-                const store = transaction.objectStore("keys");
-                const getRequest = store.get(1);  
-                getRequest.onerror = function(event) {
-                    console.error("Error fetching private key:", event.target.errorCode);
-                    reject("Failed to retrieve the private key.");
-                };
-
-                getRequest.onsuccess = function(event) {
-                    if (getRequest.result) {
-                        console.log("Private key retrieved successfully.");
-                        resolve(getRequest.result.key);  // return the private key
-                    } else {
-                        console.log("No private key found.");
-                        reject("No private key found in the database.");
-                    }
-                };
-            };
-    });
-}
+    function getPrivateKey(username) {
+        // Attempt to retrieve the private key from localStorage
+        const privateKey = localStorage.getItem(username + "_privateKey");
+        if (privateKey) {
+            console.log("Private key retrieved successfully.", privateKey);
+            return privateKey; // Return the private key
+        } else {
+            console.log("No private key found.");
+            return null; // No private key found
+        }
+    }
 
     
 function send_friend_request() {
@@ -432,9 +367,5 @@ function acceptRequest(requestUsername) {
         });
     }
 
-    function verifyHMAC(message, receivedHmac, secretKey) {
-        const generatedHmac = CryptoJS.HmacSHA256(message, secretKey).toString(CryptoJS.enc.Hex);
-        return generatedHmac === receivedHmac;
-    }
 </script>
 {% endblock %}

@@ -8,7 +8,7 @@
 <input id="password" type="password" />
 <button onclick="signup()">Sign up</button>
 
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
 <script>
     // Utility function to check if a URL is valid for redirection
     function isValidURL(string) {
@@ -17,64 +17,57 @@
 
     // Function to handle user sign up
     async function signup() {
-        if ($("#password").val().length < 4) {
-            alert("Password must be at least 4 characters long.");
-            return;
-        }
-        
         try {
-            const keyPair = await window.crypto.subtle.generateKey({
-                name: "RSA-OAEP",
-                modulusLength: 2048,
-                publicExponent: new Uint8Array([1, 0, 1]),
-                hash: {name: "SHA-256"},
-            }, true, ["encrypt", "decrypt"]);
+            const username = $("#username").val();
+            const password = $("#password").val();
+
+            if (password.length < 4) {
+                alert("Password must be at least 4 characters long.");
+                return;
+            }
+
+            // Use PBKDF2 to generate a deterministic "seed" from the password
+            const salt = username; // Using the username as the salt
+            const key = forge.pkcs5.pbkdf2(password, salt, 1000, 16);
+
+            // Convert the key to a hex string and use it as the seed for PRNG
+            const seed = forge.util.bytesToHex(key);
+
+            // Initialize PRNG with the seed
+            const prng = forge.random.createInstance();
+            prng.seedFileSync = function(needed) {
+                return forge.util.hexToBytes(seed);
+            };
             
-            const publicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
-            const privateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
-            
-            // Convert the ArrayBuffer to Base64 string
-            const publicKeyBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(publicKey)));
-            
+            // Generate key pair using the seeded PRNG
+            const keypair = forge.pki.rsa.generateKeyPair({bits: 2048, prng: prng});
+
+            // Convert keys to PEM format
+            const publicKeyPem = forge.pki.publicKeyToPem(keypair.publicKey);
+            const privateKeyPem = forge.pki.privateKeyToPem(keypair.privateKey);
+
+            // Store keys in localStorage with username as part of the key
+            localStorage.setItem(username + "_publicKey", publicKeyPem);
+            localStorage.setItem(username + "_privateKey", privateKeyPem);
+
+            // Send the public key to the server with the username and password
             const res = await axios.post("{{ url_for('signup_user') }}", {
-                username: $("#username").val(),
-                password: $("#password").val(),
-                publicKey: publicKeyBase64
+                username: username,
+                password: password,
+                publicKey: publicKeyPem
             });
 
             if (!isValidURL(res.data)) {
                 alert(res.data); // Display error message from server
                 return;
             }
-            
-            // Store the private key securely in IndexedDB or similar
-            storePrivateKeyLocally(privateKey);
-            
+
             // Redirect to the given URL
             window.location.href = res.data;
         } catch (error) {
             console.error("Error during signup", error);
             alert("An error occurred during signup. Please try again.");
         }
-    }
-
-    // Function to store private key locally
-    async function storePrivateKeyLocally(privateKey) {
-        const db = await window.indexedDB.open("KeyStore", 1);
-        db.onerror = (event) => {
-            console.error("Database error: ", event.target.errorCode);
-        };
-        db.onsuccess = (event) => {
-            const db = event.target.result;
-            const transaction = db.transaction("keys", "readwrite");
-            const store = transaction.objectStore("keys");
-            store.put({ id: 1, key: privateKey });
-            alert("Private key securely stored locally.");
-        };
-        db.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            db.createObjectStore("keys", { keyPath: "id" });
-        };
     }
 </script>
 {% endblock %}

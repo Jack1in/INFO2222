@@ -42,28 +42,6 @@ socketio = SocketIO(app)
 # don't remove this!!
 import socket_routes
 
-# generate a key pair
-def generate_key_pair(password: str):
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend()
-    )
-    public_key = private_key.public_key()
-
-    # use the password to encrypt the private key
-    pem_private_key = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.BestAvailableEncryption(password.encode())
-    )
-    # generate the public key
-    pem_public_key = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
-    return pem_private_key, pem_public_key
-
 # index page
 @app.route("/")
 def index():
@@ -104,11 +82,11 @@ def signup_user():
         abort(404)
     username = request.json.get("username")
     password = request.json.get("password")
-    public_key = request.json.get("publicKey")
+    publicKey = request.json.get("publicKey")
     
     if db.get_user(username) is None:
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        db.insert_user(username, hashed_password,public_key)
+        db.insert_user(username, hashed_password,publicKey)
         return url_for('home', username=username)
     return "Error: User already exists!"
 
@@ -136,23 +114,18 @@ def page_not_found(_):
 def get_messages(username, chatPartner):
     directory = os.path.join(app.root_path, 'messages', username)
     filename = f'{chatPartner}.json'
-
-    try:
-        return send_from_directory(directory, filename)
-    except FileNotFoundError:
-        # return a empty json file if the file does not exist
+    # check if the file exists
+    if not os.path.exists(os.path.join(directory, filename)):
         return jsonify([])
+    return send_from_directory(directory, filename)
 
+# home page, where the messaging app is
 # home page, where the messaging app is
 @app.route("/home")
 def home():
-    username = request.args.get("username")
-    if not username:
+    if request.args.get("username") is None:
         abort(404)
-    friend_requests = db.get_friend_requests(username)
-    friends_list = db.get_friends_list(username)
-    print("Data passed to template - Friend Requests:", friend_requests)  # Debugging line
-    return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list)
+    return render_template("home.jinja", username=request.args.get("username"))
 
 @app.route("/send_request", methods=["POST"])
 def send_request():
