@@ -358,7 +358,7 @@ function send_friend_request() {
         url: "/send_request",
         type: "POST",
         contentType: "application/json",
-        data: JSON.stringify({ sender: "{{ username|escape }}", receiver: friend_username }),
+        data: JSON.stringify({ sender: "{{ username|escape }}", receiver: friend_username,session_key:sessionStorage.getItem(username) }),
         success: function(response) {
             alert("Request status: " + response.result);
         },

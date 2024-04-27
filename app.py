@@ -67,7 +67,7 @@ def login_user():
     if user is None:
         return "Error: User does not exist!"
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-        session["token"] = secrets.token_hex()
+        session[username] = secrets.token_hex()
         session["username"] = username
         return url_for('home')
     else:
@@ -173,7 +173,10 @@ def home():
 def send_request():
     if not request.is_json:
         abort(400)  # Bad request
+    sessionKey = request.json.get("sessionKey")
     sender = request.json.get("sender")
+    if sessionKey != session[sender]:
+        return redirect(url_for("login"))
     receiver = request.json.get("receiver")
     if sender == receiver:
         return jsonify({"result": "You can't send a friend request to yourself!"})
