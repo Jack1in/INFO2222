@@ -76,8 +76,8 @@ def send(username, message,encryptedMessage_sender,signature,room_id):
         data_receiver = []
 
     # append the new message
-    data_sender.append({"username": username, "message": encryptedMessage_sender, "timestamp": str(datetime.datetime.now())})
-    data_receiver.append({"username": username, "message": message, "timestamp": str(datetime.datetime.now())})
+    data_sender.append({"username": username, "message": encryptedMessage_sender,"signature": signature,"timestamp": str(datetime.datetime.now())})
+    data_receiver.append({"username": username, "message": message,"signature": signature, "timestamp": str(datetime.datetime.now())})
 
     # save the messages
     with open(file_path_sender, "w") as file:
@@ -110,8 +110,11 @@ def join(sender_name, receiver_name):
     # if the user is already inside of a room 
     if room_id is not None:
         # if the receiver is room with another user
-        if room.get_users(room_id)[0] != sender_name and room.get_users(room_id)[1] != sender_name:
+        if room.get_users!=None and room.get_users(room_id)[0] != sender_name and room.get_users(room_id)[0] != receiver_name:
             return "User is already in a chat with someone else."
+        if (room.get_users(room_id).__sizeof__()>1):
+            if room.get_users(room_id)[1] != sender_name and room.get_users(room_id)[1] != receiver_name:
+                return "User is already in a chat with someone else."
         room.join_room(sender_name, room_id)
         join_room(room_id)
         # emit to everyone in the room except the sender
