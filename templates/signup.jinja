@@ -9,6 +9,7 @@
 <button onclick="signup()">Sign up</button>
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
 <script>
     // Utility function to check if a URL is valid for redirection
     function isValidURL(string) {
@@ -21,6 +22,8 @@
             alert("Password must be at least 4 characters long.");
             return;
         }
+
+        const hashedPassword = CryptoJS.SHA256($("#password").val()).toString(CryptoJS.enc.Hex);
         
         try {
             const keyPair = await window.crypto.subtle.generateKey({
@@ -38,7 +41,7 @@
             
             const res = await axios.post("{{ url_for('signup_user') }}", {
                 username: $("#username").val(),
-                password: $("#password").val(),
+                password: hashedPassword,
                 publicKey: publicKeyBase64
             });
 

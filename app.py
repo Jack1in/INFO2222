@@ -80,6 +80,7 @@ def login_user():
 
     username = request.json.get("username")
     password = request.json.get("password")
+    print(password)
 
     user =  db.get_user(username)
     if user is None:
@@ -103,7 +104,7 @@ def signup_user():
     username = request.json.get("username")
     password = request.json.get("password")
     public_key = request.json.get("publicKey")
-    
+    print(password)
     if db.get_user(username) is None:
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         db.insert_user(username, hashed_password,public_key)
