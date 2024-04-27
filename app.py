@@ -4,7 +4,7 @@ this is where you'll find all of the get/post request handlers
 the socket event handlers are inside of socket_routes.py
 '''
 
-from flask import Flask, render_template, request, abort, url_for, jsonify,send_from_directory
+from flask import Flask, render_template, request, abort, url_for, jsonify,send_from_directory,session,redirect
 import os
 from flask_socketio import SocketIO
 from sqlalchemy.orm import Session
@@ -26,7 +26,6 @@ import os
 # log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
-'''
 cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
 cert_path = os.path.join(cert_dir, 'localhost.crt')
 key_path = os.path.join(cert_dir, 'localhost.key')
@@ -36,7 +35,6 @@ app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https' 
 app.config['SSL_CERT_PATH'] = cert_path
 app.config['SSL_KEY_PATH'] = key_path
-'''
 socketio = SocketIO(app)
 
 # don't remove this!!
@@ -65,7 +63,8 @@ def login_user():
     if user is None:
         return "Error: User does not exist!"
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-        return url_for('home', username=request.json.get("username"))
+        session["username"] = username
+        return url_for('home')
     else:
         return "Error: Password does not match!"
     
@@ -145,6 +144,18 @@ def get_messages(username, chat_partner):
 # home page, where the messaging app is
 @app.route("/home")
 def home():
+    if "username" in session:
+        username = session["username"]
+        friend_requests = db.get_friend_requests(username)
+        friends_list = db.get_friends_list(username)
+        print("Data passed to template - Friend Requests:", friend_requests)  # Debugging line
+        return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list)
+    else:
+        return render_template("login.jinja")
+     
+    
+    
+    
     username = request.args.get("username")
     if not username:
         abort(404)
@@ -232,5 +243,4 @@ def test_models():
 
 
 if __name__ == '__main__':
-    socketio.run(app)
-    #socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
+    socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
