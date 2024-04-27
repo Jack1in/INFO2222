@@ -12,7 +12,7 @@ try:
 except ImportError:
     from app import socketio
 
-from models import Room
+from models import Room, User
 
 import db, os, json, datetime
 
@@ -90,6 +90,8 @@ def send(username, message,encryptedMessage_sender,signature,room_id):
 # sent when the user joins a room
 @socketio.on("join")
 def join(sender_name, receiver_name):
+    if sender_name == receiver_name:
+        return "You can't chat with yourself :("
     
     receiver = db.get_user(receiver_name)
     if receiver is None:
@@ -98,6 +100,10 @@ def join(sender_name, receiver_name):
     sender = db.get_user(sender_name)
     if sender is None:
         return "Unknown sender!"
+    
+    friends = db.get_friends_list(sender_name)
+    if receiver not in friends:
+        return "You can only chat with friends!"
 
     room_id = room.get_room_id(receiver_name)
 

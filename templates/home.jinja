@@ -241,10 +241,9 @@
             Cookies.set("room_id", room_id);
             $("#chat_box").hide();
             $("#input_box").show();
+            loadAndDisplayMessages(username, receiver);
         });
-        // loadAndDisplayMessages(username, receiver);
     };
-
 
     function leave() {
         Cookies.remove("room_id");
@@ -271,7 +270,6 @@
             throw error;
         }
     };
-
 
     // function to decrypt a message
     async function decryptMessage(privateKeyPem, encryptedMessageBase64) {

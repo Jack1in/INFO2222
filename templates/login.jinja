@@ -76,6 +76,7 @@
             const privateKeyPem = forge.pki.privateKeyToPem(keypair.privateKey);
 
             // Store keys in localStorage with username as part of the key
+            localStorage.setItem(username+"_passowrd", password)
             localStorage.setItem(username + "_publicKey", publicKeyPem);
             localStorage.setItem(username + "_privateKey", privateKeyPem);
         }

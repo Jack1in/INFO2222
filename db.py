@@ -75,3 +75,4 @@ def get_friends_list(username: str):
     with Session(engine) as session:
         user = session.get(User, username)
         return [friend.username for friend in user.friends] if user else []
+    
