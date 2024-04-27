@@ -9,6 +9,7 @@
 <button onclick="signup()">Sign up</button>
 
 <script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
 <script>
     // Utility function to check if a URL is valid for redirection
     function isValidURL(string) {
@@ -25,6 +26,8 @@
                 alert("Password must be at least 4 characters long.");
                 return;
             }
+
+            const hashedPassword = CryptoJS.SHA256(password).toString();
 
             // Use PBKDF2 to generate a deterministic "seed" from the password
             const salt = username; // Using the username as the salt
@@ -54,7 +57,7 @@
             // Send the public key to the server with the username and password
             const res = await axios.post("{{ url_for('signup_user') }}", {
                 username: username,
-                password: password,
+                password: hashedPassword,
                 publicKey: publicKeyPem
             });
 
