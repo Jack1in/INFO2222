@@ -38,17 +38,18 @@
                     password: hashedPassword
                 });
 
-                if (!isValidURL(res.data)) {
+                if (!isValidURL(res.data.home_url)) {
                     alert(res.data);
                     return;
                 }
+                sessionStorage.setItem('session_key', res.data.session_key);
 
                 // The server validated the user's credentials successfully
                 // Now generate the key pair based on the username and password
                 generateKeysAndStore(username, password);
 
                 // Redirect to the URL provided by the server
-                window.open(res.data, "_self");
+                window.open(res.data.home_url, "_self");
             } catch (error) {
                 console.error("Error during login", error);
                 alert("An error occurred during login. Please try again.");
