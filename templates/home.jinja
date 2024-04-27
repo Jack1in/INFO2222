@@ -232,6 +232,8 @@
     function join_room() {
         let receiver = $("#receiver").val();
         console.log(receiver);
+        // remove everything in chat box
+        $("#message_box").empty();
         socket.emit("join", username, receiver, (res) => {
             if (typeof res != "number") {
                 alert(res);
@@ -285,7 +287,7 @@
     };
 
 
-        // function to decrypt a message
+    // function to decrypt a message
     async function decryptMessage(privateKey, encryptedMessageBase64) {
         console.log("privateKey", privateKey);
         console.log("encryptedMessage", encryptedMessageBase64);
@@ -314,8 +316,6 @@
             throw error;
         }
         try {
-            // 确保 encryptedMessage 是 ArrayBuffer 类型
-            // 如果 encryptedMessageBase64 是 Base64 字符串，则需要解码
             const encryptedMessageArrayBuffer = new Uint8Array(encryptedMessage.length);
             for (let i = 0; i < encryptedMessage.length; i++) {
                 encryptedMessageArrayBuffer[i] = encryptedMessage.charCodeAt(i);

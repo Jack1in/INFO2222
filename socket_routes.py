@@ -74,7 +74,7 @@ def send(username, message,encryptedMessage_sender,hmac, room_id):
         sender = users[1]
         receiver = users[0]
     # send the message
-    emit("incoming_message", (f"{username}: {message}"),hmac,to=room_id)
+    emit("incoming_message", (f"{username}: {message}",hmac),to=room_id)
     
     # save file 
     file_path_sender = f"messages/{username}/{receiver}.json"
