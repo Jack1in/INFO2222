@@ -279,5 +279,6 @@ def logout():
     return jsonify({"result": "logged out"}), 200
 
 
+
 if __name__ == '__main__':
     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))

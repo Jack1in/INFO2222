@@ -100,6 +100,7 @@
         let username = "{{ username|escape}}";
         try {
             privateKey = await getPrivateKey(username);
+            sessionStorage.setItem('loggedIn', 'true'); 
         } catch (error) {
             console.error('Failed to get private key:', error);
             return;
@@ -296,7 +297,7 @@
     function logout() {
         const username = "{{ username|escape }}";
         const data = { username: username };
-
+        
         fetch('/logout', {
             method: 'POST',
             headers: {
@@ -470,26 +471,22 @@ function acceptRequest(requestUsername) {
         });
     }
 
-    window.onbeforeunload = async function() {
+    window.addEventListener('beforeunload', function(event) {
+    if (sessionStorage.getItem('loggedIn')) {
         const username = "{{ username|escape }}";
-        const data = JSON.stringify({ username: username });
+        const data = new FormData();
+        data.append('username', username);
 
-        console.log("onbeforeunload event triggered"); // Debug log
 
-        try {
-            const response = await fetch('/logout', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: data,
-                keepalive: true  // Ensures the request is completed even when the page is closed
-            });
-            console.log("Logout response:", response); // Debug log
-        } catch (error) {
-            console.error("Logout failed:", error); // Debug log
-        }
-    };
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/logout', false);
+        xhr.send(data);
+        
+        sessionStorage.removeItem('loggedIn');
+    }
+});
+
+    
 
 </script>
 {% endblock %}
