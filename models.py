@@ -11,7 +11,7 @@ Prisma docs also looks so much better in comparison
 or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attacks :) )
 '''
 from collections import UserList
-from sqlalchemy import String, Integer, ForeignKey, Table, Column
+from sqlalchemy import String, Integer, ForeignKey, Table, Column,Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
 from typing import Dict, List
 
@@ -44,6 +44,8 @@ class User(Base):
     username: Mapped[str] = mapped_column(String, primary_key=True,unique=True)
     password: Mapped[str] = mapped_column(String)
     public_key: Mapped[str] = mapped_column(String)
+    role: Mapped[str] = mapped_column(String, nullable=False,default='user')
+    online_status: Mapped[bool] = mapped_column(Boolean, default=False)
     friends = relationship(
         'User',
         secondary=friend_association,

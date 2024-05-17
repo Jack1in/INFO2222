@@ -25,6 +25,7 @@
 <nav>
     <ol style="float: right">
         <li style="display:inline-block">Username: {{ username|escape }}</li>
+        <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
     </ol>
     <ul style="float: left">
         <li><strong>Friend Requests:</strong>
@@ -44,7 +45,11 @@
         <li><strong>Friends List:</strong>
             <ul id="friends_list">
                 {% for friend in friends_list %}
-                    <li>{{ friend|escape }}</li>
+                    <li id="friend-{{ friend.username }}">
+                        {{ friend.username|escape }} - {{ friend.role|escape }} - 
+                        {% if friend.online_status %}Online{% else %}Offline{% endif %}
+                        <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
+                    </li>
                 {% endfor %}
             </ul>
             {% if not friends_list %}
@@ -53,6 +58,7 @@
         </li>
     </ul>
 </nav>
+
 
 <h1>Messaging App</h1>
 
@@ -261,13 +267,63 @@
             console.error('Error loading or decrypting messages:', error);
         }
     };
+    
+    function removeFriend(friendUsername) {
+        let sessionKey = sessionStorage.getItem('sessionKey');
+        $.ajax({
+            url: "/remove_friend",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ username: "{{ username|escape }}", friend_username: friendUsername, sessionKey: sessionKey }),
+            success: function(response) {
+                if (response.result === "Friend removed successfully.") {
+                    let friendItem = document.getElementById(`friend-${friendUsername}`);
+                    if (friendItem) {
+                        friendItem.parentNode.removeChild(friendItem);
+                    }
+                    alert("Friend removed successfully.");
+                } else {
+                    alert(response.result);
+                }
+            },
+            error: function() {
+                alert("Error processing request.");
+            }
+        });
+    }
+    
 
+    function logout() {
+        const username = "{{ username|escape }}";
+        const data = { username: username };
+        
+        fetch('/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+            if (response.ok) {
+                Cookies.remove("username");
+                Cookies.remove("room_id");
+                sessionStorage.removeItem('sessionKey');
+                window.location.href = "{{ url_for('login') }}";
+            } else {
+                alert('Logout failed');
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('Logout failed');
+        });
+    }
 
     function join_room() {
         let receiver = $("#receiver").val();
         // remove everything in chat box
         $("#message_box").empty();
         socket.emit("join", username, receiver, (res) => {
+            console.log(res);
             if (typeof res != "number") {
                 alert(res);
                 return;
@@ -278,7 +334,7 @@
             $("#input_box").show();
             loadAndDisplayMessages(username, receiver);
         });
-    };
+    }
 
     function leave() {
         Cookies.remove("room_id");
@@ -336,9 +392,8 @@
     function getPrivateKey(username) {
         // Attempt to retrieve the private key from localStorage
         const privateKey = localStorage.getItem(username + "_privateKey");
-        console.log(username + "_privateKey");
         if (privateKey) {
-            console.log("Private key retrieved successfully.", privateKey);
+            console.log("Private key retrieved successfully.");
             return privateKey; // Return the private key
         } else {
             console.log("No private key found.");
@@ -417,7 +472,7 @@ function acceptRequest(requestUsername) {
 
 window.onbeforeunload = function() {
     const username = "{{ username|escape }}";
-    const data = JSON.stringify({username: username});
+    const data = JSON.stringify({ username: username });
     navigator.sendBeacon('/logout', data);
 };
 

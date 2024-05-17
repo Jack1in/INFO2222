@@ -24,23 +24,19 @@ import os
 # log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
-'''
 cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
 cert_path = os.path.join(cert_dir, 'localhost.crt')
 key_path = os.path.join(cert_dir, 'localhost.key')
 app.config['SSL_CERT_PATH'] = cert_path
 app.config['SSL_KEY_PATH'] = key_path
-'''
 # secret key used to sign the session cookie
 app.config['SECRET_KEY'] = 'nice_secret_ley'
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
-'''
 app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
-'''
 
 
 socketio = SocketIO(app)
@@ -73,8 +69,11 @@ def login_user():
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
         session_key = secrets.token_hex()
         session[username] = session_key
-        print(session)
-        home_url = url_for('home', username=request.json.get("username"),sessionKey=session_key)
+        db.set_online_status(username, True)
+        
+        print(f"User Role: {user.role}, Online Status: {user.online_status}")
+        
+        home_url = url_for('home', username=request.json.get("username"), sessionKey=session_key)
         return jsonify({"home_url": home_url, "session_key": session_key}), 200
     else:
         return "Error: Password does not match!"
@@ -94,10 +93,11 @@ def signup_user():
     username = request.json.get("username")
     password = request.json.get("password")
     publicKey = request.json.get("publicKey")
+    role = request.json.get("role")
     
     if db.get_user(username) is None:
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        db.insert_user(username, hashed_password,publicKey)
+        db.insert_user(username, hashed_password,publicKey,role)
         return url_for('login')
     return "Error: User already exists!"
 
@@ -126,17 +126,13 @@ def request_history():
     try:
         data = request.get_json()
         username = data.get("username")
-        print(username)
         chat_partner = data.get("chatPartner")
         sessionKey = data.get("sessionKey")
-        print(sessionKey)
-        print(session)
         user = db.get_user(username)
         if user is None:
             return jsonify({"error": "User not found"}), 404
         if sessionKey != session.get(username):
             return "invalid session key", 404
-        print("request_history")
         messages = get_messages(username, chat_partner)
         return messages
     except Exception as e:
@@ -156,9 +152,6 @@ def get_messages(username, chat_partner):
 @app.route("/home")
 def home():
     username = request.args.get("username")
-    print(username)
-    print(request.args.get("sessionKey"))
-    print(session)
     if request.args.get("sessionKey") != session.get(username):
         return redirect(url_for("login"))
     friend_requests = db.get_friend_requests(username)
@@ -177,7 +170,6 @@ def send_request():
     if sender == receiver:
         return jsonify({"result": "You can't send a friend request to yourself!"})
     result = db.send_friend_request(sender, receiver)
-    print(result)
     return jsonify({"result": result})
 
 
@@ -191,7 +183,6 @@ def accept_friend_request():
     sessionKey = request.json.get("sessionKey")
     if sessionKey != session.get(receiver):
         return jsonify("invalid session key")
-    print("accept_friend_request")
     result = db.accept_friend_request(sender, receiver)
     return jsonify({"result": result})
 
@@ -208,6 +199,17 @@ def reject_friend_request():
     result = db.reject_friend_request(sender, receiver)
     return jsonify({"result": result})
 
+@app.route("/remove_friend", methods=["POST"])
+def remove_friend():
+    if not request.is_json:
+        abort(400)
+    username = request.json.get("username")
+    friend_username = request.json.get("friend_username")
+    sessionKey = request.json.get("sessionKey")
+    if sessionKey != session.get(username):
+        return jsonify("invalid session key")
+    result = db.remove_friend(username, friend_username)
+    return jsonify({"result": result})
 
 # test models
 @app.route('/test')
@@ -258,10 +260,12 @@ def logout():
     if not request.is_json:
         abort(400)
     username = request.json.get("username")
+    user =  db.get_user(username)
     session.pop(username)
+    db.set_online_status(username, False)
+    print(f"User Role: {user.role}, Online Status: {user.online_status}")
     return "logged out"
 
 
 if __name__ == '__main__':
-    socketio.run(app)
-    # socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
+    socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))

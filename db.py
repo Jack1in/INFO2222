@@ -22,9 +22,9 @@ engine = create_engine("sqlite:///database/main.db", echo=False)
 Base.metadata.create_all(engine)
 
 # inserts a user to the database
-def insert_user(username: str, password: str,public_key:str):
+def insert_user(username: str, password: str, public_key: str, role: str):
     with Session(engine) as session:
-        user = User(username=username, password=password,public_key=public_key)
+        user = User(username=username, password=password, public_key=public_key, role=role)
         session.add(user)
         session.commit()
 
@@ -37,7 +37,6 @@ def send_friend_request(sender_username, receiver_username):
     with Session(engine) as session:
         sender = session.get(User, sender_username)
         receiver = session.get(User, receiver_username)
-        print("good?")
         if sender and receiver:
             result = sender.send_request(receiver_username, session)
             session.commit()
@@ -68,12 +67,34 @@ def get_friend_requests(username: str) -> List[dict]:
         user = session.get(User, username)
         if user:
             requests = [{'username': name} for name in user.view_requests('received')]
-            print("Formatted Friend Requests:", requests)  # Debugging line
             return requests
         return []
 
 def get_friends_list(username: str):
     with Session(engine) as session:
         user = session.get(User, username)
-        return [friend.username for friend in user.friends] if user else []
+        if user:
+            friends_list = [{'username': friend.username, 'online_status': friend.online_status, 'role': friend.role} for friend in user.friends]
+            return friends_list
+        return []
     
+def set_online_status(username: str, status: bool):
+    with Session(engine) as session:
+        user = session.get(User, username)
+        if user:
+            user.online_status = status
+            session.commit()
+
+def remove_friend(username: str, friend_username: str) -> str:
+    with Session(engine) as session:
+        user = session.get(User, username)
+        friend = session.get(User, friend_username)
+        if user and friend:
+            if friend in user.friends:
+                user.friends.remove(friend)
+                friend.friends.remove(user)
+                session.commit()
+                return "Friend removed successfully."
+            else:
+                return "User is not a friend."
+        return "User not found."

@@ -28,8 +28,7 @@
                 return;
             }
             const hashedPassword = CryptoJS.SHA256(password).toString();
-            console.log("Hashed password", hashedPassword);
-            console.log("password", password);
+        
             let loginURL = "{{ url_for('login_user') }}";
 
             try {
