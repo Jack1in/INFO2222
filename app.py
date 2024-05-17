@@ -258,13 +258,25 @@ def test_models():
 @app.route('/logout', methods=['POST'])
 def logout():
     if not request.is_json:
-        abort(400)
+        return jsonify({"error": "Invalid request"}), 400
+
     username = request.json.get("username")
-    user =  db.get_user(username)
-    session.pop(username)
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+
+    print(f"Received logout request for user: {username}")  # Debug log
+
+    user = db.get_user(username)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    session.pop(username, None)
     db.set_online_status(username, False)
+    
+    user = db.get_user(username)  # Fetch updated user data
     print(f"User Role: {user.role}, Online Status: {user.online_status}")
-    return "logged out"
+
+    return jsonify({"result": "logged out"}), 200
 
 
 if __name__ == '__main__':

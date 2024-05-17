@@ -2,41 +2,17 @@
 
 {% block content %}
 <style>
-    body {
-        display: flex;
-        flex-direction: column;
-    }
-
     nav {
         border-bottom: 1px solid black;
         overflow: auto;
-        display: flex;
-        justify-content: space-between;
-        padding: 10px;
-    }
-
-    #left_panel {
-        width: 250px;
-        border-right: 1px solid black;
-        padding: 10px;
-        height: 100vh; /* Set the height to full viewport height */
-        box-sizing: border-box;
     }
 
     #message_box {
         border: 1px solid black;
         height: 400px;
-        width: 600px;
+        width: 800px;
         overflow: auto;
         padding: 2px;
-    }
-
-    #main_content {
-        display: flex;
-    }
-
-    #chat_section {
-        padding: 10px;
     }
 
     .text {
@@ -47,73 +23,71 @@
 
 <!-- Navbar, displaying the username and friend functionalities -->
 <nav>
-    <div>
+    <ol style="float: right">
         <li style="display:inline-block">Username: {{ username|escape }}</li>
         <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
-    </div>
-</nav>
-
-<div id="main_content">
-    <div id="left_panel">
-        <ul>
-            <li><strong>Friend Requests:</strong>
-                {% if friend_requests %}
-                    <ul>
-                        {% for request in friend_requests %}
-                            <li id="request-{{ request.username }}">{{ request.username|escape}}
-                                <button onclick="acceptRequest('{{ request.username|escape }}')">Accept</button>
-                                <button onclick="rejectRequest('{{ request.username|escape }}')">Reject</button>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>No friend requests.</p>
-                {% endif %}
-            </li>
-            <li><strong>Friends List:</strong>
-                <ul id="friends_list">
-                    {% for friend in friends_list %}
-                        <li id="friend-{{ friend.username }}">
-                            {{ friend.username|escape }} - {{ friend.role|escape }} - 
-                            {% if friend.online_status %}Online{% else %}Offline{% endif %}
-                            <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
+    </ol>
+    <ul style="float: left">
+        <li><strong>Friend Requests:</strong>
+            {% if friend_requests %}
+                <ul>
+                    {% for request in friend_requests %}
+                        <li id="request-{{ request.username }}">{{ request.username|escape}}
+                            <button onclick="acceptRequest('{{ request.username|escape }}')">Accept</button>
+                            <button onclick="rejectRequest('{{ request.username|escape }}')">Reject</button>
                         </li>
                     {% endfor %}
                 </ul>
-                {% if not friends_list %}
-                    <p id="no_friends_msg">No friends yet.</p>
-                {% endif %}
-            </li>
-            <li><strong>Add Friend:</strong>
-                <section id="friend_request_box">
-                    <p class="text">Add Friend:</p>
-                    <input id="friend_username" placeholder="Enter friend's username">
-                    <button onclick="send_friend_request()">Send Friend Request</button>
-                </section>
-            </li>
-        </ul>
-    </div>
+            {% else %}
+                <p>No friend requests.</p>
+            {% endif %}
+        </li>
+        <li><strong>Friends List:</strong>
+            <ul id="friends_list">
+                {% for friend in friends_list %}
+                    <li id="friend-{{ friend.username }}">
+                        {{ friend.username|escape }} - {{ friend.role|escape }} - 
+                        {% if friend.online_status %}Online{% else %}Offline{% endif %}
+                        <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
+                    </li>
+                {% endfor %}
+            </ul>
+            {% if not friends_list %}
+                <p id="no_friends_msg">No friends yet.</p>
+            {% endif %}
+        </li>
+    </ul>
+</nav>
 
-    <div id="chat_section">
-        <h1>Messaging App</h1>
-        <section id="message_box"></section>
 
-        <!-- Chat box for choosing a chat partner -->
-        <section id="chat_box">
-            <p class="text">Chat with:</p>
-            <input id="receiver" placeholder="username">
-            <button onclick="join_room()">Chat</button>
-        </section>
+<h1>Messaging App</h1>
 
-        <!-- The input box for sending messages, initially hidden -->
-        <section id="input_box" style="display: none">
-            <p class="text">Message:</p>
-            <input id="message" placeholder="message">
-            <button onclick="send()">Send</button>
-            <button onclick="leave()">Leave Room</button>
-        </section>
-    </div>
-</div>
+<main>
+    <!-- The messages are displayed here -->
+    <section id="message_box"></section>
+
+    <!-- Chat box for choosing a chat partner -->
+    <section id="chat_box">
+        <p class="text">Chat with:</p>
+        <input id="receiver" placeholder="username">
+        <button onclick="join_room()">Chat</button>
+    </section>
+
+    <!-- The input box for sending messages, initially hidden -->
+    <section id="input_box" style="display: none">
+        <p class="text">Message:</p>
+        <input id="message" placeholder="message">
+        <button onclick="send()">Send</button>
+        <button onclick="leave()">Leave Room</button>
+    </section>
+
+    <!-- Friend request box for adding new friends -->
+    <section id="friend_request_box">
+        <p class="text">Add Friend:</p>
+        <input id="friend_username" placeholder="Enter friend's username">
+        <button onclick="send_friend_request()">Send Friend Request</button>
+    </section>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
@@ -322,7 +296,7 @@
     function logout() {
         const username = "{{ username|escape }}";
         const data = { username: username };
-        
+
         fetch('/logout', {
             method: 'POST',
             headers: {
@@ -496,11 +470,26 @@ function acceptRequest(requestUsername) {
         });
     }
 
-window.onbeforeunload = function() {
-    const username = "{{ username|escape }}";
-    const data = JSON.stringify({ username: username });
-    navigator.sendBeacon('/logout', data);
-};
+    window.onbeforeunload = async function() {
+        const username = "{{ username|escape }}";
+        const data = JSON.stringify({ username: username });
+
+        console.log("onbeforeunload event triggered"); // Debug log
+
+        try {
+            const response = await fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: data,
+                keepalive: true  // Ensures the request is completed even when the page is closed
+            });
+            console.log("Logout response:", response); // Debug log
+        } catch (error) {
+            console.error("Logout failed:", error); // Debug log
+        }
+    };
 
 </script>
 {% endblock %}
