@@ -472,19 +472,18 @@ function acceptRequest(requestUsername) {
     }
 
     window.addEventListener('beforeunload', function(event) {
-    if (sessionStorage.getItem('loggedIn')) {
-        const username = "{{ username|escape }}";
-        const data = new FormData();
-        data.append('username', username);
-
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/logout', false);
-        xhr.send(data);
-        
-        sessionStorage.removeItem('loggedIn');
-    }
-});
+        if (sessionStorage.getItem('loggedIn')) {
+            const username = "{{ username|escape }}";
+            const data = new FormData();
+            data.append('username', username);
+    
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/logout', false);
+            xhr.send(data);
+            
+            sessionStorage.removeItem('loggedIn');
+        }
+    });
 
     
 

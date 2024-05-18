@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 from models import *
 import bcrypt, jsonify
 from pathlib import Path
-
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from hashlib import sha256
 # creates the database directory
 Path("database") \
     .mkdir(exist_ok=True)
@@ -80,7 +82,7 @@ def get_friends_list(username: str):
     
 def set_online_status(username: str, status: bool):
     with Session(engine) as session:
-        user = session.get(User, username)
+        user = session.query(User).filter_by(username=username).first()
         if user:
             user.online_status = status
             session.commit()
@@ -98,3 +100,55 @@ def remove_friend(username: str, friend_username: str) -> str:
             else:
                 return "User is not a friend."
         return "User not found."
+    
+# Insert a staff account after the database is created
+def insert_staff_account():
+    username = "staff_user"
+    password = "staff_password"
+    role = "admin"
+    if get_user(username) is None:
+        # Generate key pair
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+        public_key = private_key.public_key()
+
+        # Convert keys to PEM format
+        private_key_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        ).decode('utf-8')
+
+        public_key_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode('utf-8')
+
+        # Store the private key in a secure manner (here we just print it)
+        print(f"Private Key (store this securely): {private_key_pem}")
+
+        # First, hash the password using SHA-256
+        sha256_hashed_password = sha256(password.encode('utf-8')).hexdigest()
+
+        # Then, hash the SHA-256 hashed password using bcrypt
+        hashed_password_twice = bcrypt.hashpw(sha256_hashed_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        # Insert user with public key
+        print(f"Inserting user {username} with role {role}")
+        insert_user(username, hashed_password_twice, public_key_pem, role)
+
+        # Verify insertion by fetching the user and printing details
+        user = get_user(username)
+        if user:
+            print(f"User '{user.username}' inserted successfully.")
+            print(f"Public Key: {user.public_key}")
+            print(f"Role: {user.role}")
+        else:
+            print("Failed to insert user.")
+    else:
+        print(f"User '{username}' already exists.")
+
+# Call the function to insert the staff account
+insert_staff_account()

@@ -37,8 +37,9 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
-
-
+with open('config.json', 'r') as json_file:
+    config = json.load(json_file)
+    app.config['ADMIN_CODE_HASH'] = config['admin_code_hash']
 socketio = SocketIO(app)
 
 
@@ -93,11 +94,21 @@ def signup_user():
     username = request.json.get("username")
     password = request.json.get("password")
     publicKey = request.json.get("publicKey")
-    role = request.json.get("role")
+    adminCode = request.json.get("adminCode")
     
+    # Check if the user already exists
     if db.get_user(username) is None:
+        # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        db.insert_user(username, hashed_password,publicKey,role)
+        
+        # Determine role based on admin code
+        if adminCode and bcrypt.checkpw(adminCode.encode('utf-8'), app.config['ADMIN_CODE_HASH'].encode('utf-8')):
+            role = 'admin'
+        else:
+            role = 'user'
+        
+        # Insert the user with the determined role
+        db.insert_user(username, hashed_password, publicKey, role)
         return url_for('login')
     return "Error: User already exists!"
 
@@ -258,26 +269,13 @@ def test_models():
 @app.route('/logout', methods=['POST'])
 def logout():
     if not request.is_json:
-        return jsonify({"error": "Invalid request"}), 400
-
+        abort(400)
     username = request.json.get("username")
-    if not username:
-        return jsonify({"error": "Username is required"}), 400
-
-    print(f"Received logout request for user: {username}")  # Debug log
-
-    user = db.get_user(username)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    session.pop(username, None)
+    user =  db.get_user(username)
+    session.pop(username)
     db.set_online_status(username, False)
-    
-    user = db.get_user(username)  # Fetch updated user data
     print(f"User Role: {user.role}, Online Status: {user.online_status}")
-
-    return jsonify({"result": "logged out"}), 200
-
+    return "logged out"
 
 
 if __name__ == '__main__':
