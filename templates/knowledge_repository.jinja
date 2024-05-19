@@ -69,6 +69,10 @@
     .article-title {
         font-size: 1.2em;
         font-weight: bold;
+        color: black; /* Ensure title color is always black */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .article-author {
@@ -76,9 +80,17 @@
         color: #555;
     }
 
+    .article-details-container {
+        background-color: white;
+        color: black;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
     .article-details {
         font-size: 1em;
-        color: #333;
+        color: black;
         word-wrap: break-word;
         white-space: pre-wrap;
     }
@@ -165,7 +177,9 @@
 
     <section class="right-panel">
         <h2>Article Details</h2>
-        <div id="article_details" class="article-details">
+        <div id="article_details" class="article-details-container">
+            <div class="article-details">
+            </div>
         </div>
         <h3>Comments</h3>
         <div id="comments_list">
@@ -200,6 +214,14 @@
 
         function closeModal() {
             document.getElementById('postArticleModal').style.display = 'none';
+        }
+
+        function openEditModal() {
+            document.getElementById('editArticleModal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editArticleModal').style.display = 'none';
         }
 
         document.getElementById('postArticleBtn').onclick = openModal;
@@ -280,7 +302,7 @@
         }
 
         function viewArticle(article) {
-            const articleDetails = document.getElementById('article_details');
+            const articleDetails = document.querySelector('.article-details');
             articleDetails.dataset.title = article.title;
             articleDetails.dataset.username = article.username;
             articleDetails.innerHTML = `
@@ -295,14 +317,6 @@
                 `;
             }
             loadComments(article.title, article.username);
-        }
-
-        function openEditModal() {
-            document.getElementById('editArticleModal').style.display = 'block';
-        }
-
-        function closeEditModal() {
-            document.getElementById('editArticleModal').style.display = 'none';
         }
 
         function editArticle(oldTitle, oldUsername, content) {
@@ -397,8 +411,8 @@
 
         async function postComment() {
             const commentContent = document.getElementById('commentContent').value;
-            const articleTitle = document.getElementById('article_details').dataset.title;
-            const articleUsername = document.getElementById('article_details').dataset.username;
+            const articleTitle = document.querySelector('.article-details').dataset.title;
+            const articleUsername = document.querySelector('.article-details').dataset.username;
             const username = "{{ request.args.get('username') }}";
             const sessionKey = "{{ request.args.get('sessionKey') }}";
             const commentPublisher = username;
@@ -520,6 +534,8 @@
 
         window.postArticle = postArticle;
         window.closeModal = closeModal;
+        window.openEditModal = openEditModal;
+        window.closeEditModal = closeEditModal;
         window.viewArticle = viewArticle;
         window.editArticle = editArticle;
         window.updateArticle = updateArticle;
@@ -532,4 +548,3 @@
     });
 </script>
 {% endblock %}
-

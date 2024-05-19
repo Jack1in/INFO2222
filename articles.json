@@ -7,7 +7,7 @@
     {
         "username": "1111",
         "title": "dasdasdsaDDADDADASD",
-        "content": "dasdasddsaDASDADASDAS"
+        "content": "dasdasddsaDdasasASDADASDAS"
     },
     {
         "username": "1111",
@@ -18,5 +18,10 @@
         "username": "1111",
         "title": "sASas",
         "content": "sASa"
+    },
+    {
+        "username": "1111",
+        "title": "xasasdasdasdas",
+        "content": "                }\n            } catch (error) {\n                console.error(\"Error deleting comment:\", error);\n                alert(\"An error occurred while deleting the comment.\");\n            }\n        }\n"
     }
 ]
