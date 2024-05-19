@@ -1,0 +1,535 @@
+{% extends 'base.jinja' %}
+
+{% block content %}
+<style>
+    #postArticleModal, #editArticleModal {
+        display: none;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px;
+        border: 1px solid black;
+        background-color: white;
+        width: 50%;
+        height: 60%;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        overflow: auto;
+    }
+
+    .modal-header, .modal-footer {
+        padding: 10px;
+        background-color: #f1f1f1;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .modal-footer {
+        border-top: 1px solid #ddd;
+        border-bottom: none;
+    }
+
+    .modal-content {
+        padding: 20px;
+        text-align: center;
+    }
+
+    .container {
+        display: flex;
+    }
+
+    .left-panel {
+        width: 25%;
+        padding: 10px;
+        border-right: 1px solid #ccc;
+        overflow-y: auto;
+    }
+
+    .right-panel {
+        width: 75%;
+        padding: 10px;
+        overflow-y: auto;
+    }
+
+    .article-container {
+        border: 2px solid #007BFF;
+        padding: 15px;
+        margin: 10px 0;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    .article-container:hover {
+        background-color: #e0e0e0;
+        border-color: #0056b3;
+    }
+
+    .article-title {
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+
+    .article-author {
+        font-size: 0.9em;
+        color: #555;
+    }
+
+    .article-details {
+        font-size: 1em;
+        color: #333;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+    }
+
+    .article-details-title {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .article-details-author {
+        font-size: 1.1em;
+        color: #555;
+        margin-bottom: 15px;
+    }
+
+    .input-field {
+        width: 90%;
+        padding: 10px;
+        margin: 10px auto;
+        box-sizing: border-box;
+        display: block;
+        border: 3px solid black;
+        word-wrap: break-word;
+    }
+
+    textarea.input-field {
+        height: 150px;
+        resize: vertical;
+        border: 3px solid black;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+    }
+
+    .comment-container {
+        border-top: 1px solid #ccc;
+        padding: 10px 0;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+    }
+
+    .comment-author {
+        font-weight: bold;
+    }
+
+    .comment-content {
+        margin-left: 10px;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+    }
+</style>
+
+<nav>
+    <button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Back to Home page</button>
+</nav>
+
+<h1>Knowledge Repository</h1>
+
+<main class="container">
+    <section class="left-panel" id="articles">
+        <h2>Articles</h2>
+        <button id="postArticleBtn">Post Article</button>
+
+        <div id="postArticleModal">
+            <div class="modal-header">
+                <h3>Post a New Article</h3>
+                <button onclick="closeModal()" style="float: right;">&times;</button>
+            </div>
+            <div class="modal-content">
+                <p>Title:</p>
+                <input type="text" id="articleTitle" class="input-field" placeholder="Enter the title">
+                <p>Content:</p>
+                <textarea id="articleContent" class="input-field" placeholder="Write your article here..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button onclick="postArticle()">Submit</button>
+                <button onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+
+        <div id="articles_list">
+        </div>
+    </section>
+
+    <section class="right-panel">
+        <h2>Article Details</h2>
+        <div id="article_details" class="article-details">
+        </div>
+        <h3>Comments</h3>
+        <div id="comments_list">
+        </div>
+        <textarea id="commentContent" class="input-field" placeholder="Write your comment here..."></textarea>
+        <button onclick="postComment()">Post Comment</button>
+    </section>
+</main>
+
+<div id="editArticleModal">
+    <div class="modal-header">
+        <h3>Edit Article</h3>
+        <button onclick="closeEditModal()" style="float: right;">&times;</button>
+    </div>
+    <div class="modal-content">
+        <p>Title:</p>
+        <input type="text" id="editArticleTitle" class="input-field" placeholder="Enter the title">
+        <p>Content:</p>
+        <textarea id="editArticleContent" class="input-field" placeholder="Write your article here..."></textarea>
+    </div>
+    <div class="modal-footer">
+        <button onclick="updateArticle()">Update</button>
+        <button onclick="closeEditModal()">Cancel</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        function openModal() {
+            document.getElementById('postArticleModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('postArticleModal').style.display = 'none';
+        }
+
+        document.getElementById('postArticleBtn').onclick = openModal;
+
+        async function postArticle() {
+            const articleTitle = document.getElementById('articleTitle').value;
+            const articleContent = document.getElementById('articleContent').value;
+            const username = "{{ request.args.get('username') }}";
+            const sessionKey = "{{ request.args.get('sessionKey') }}";
+
+            if (!articleTitle || !articleContent) {
+                alert("Title and content cannot be empty!");
+                return;
+            }
+
+            try {
+                const response = await fetch("{{ url_for('post_article') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        sessionKey: sessionKey,
+                        title: articleTitle,
+                        content: articleContent,
+                    }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert("Article posted successfully!");
+                    closeModal();
+                    loadArticles();
+                } else {
+                    const errorText = await response.text();
+                    console.error("Failed to post article:", errorText);
+                    alert("Failed to post article. Server response: " + errorText);
+                }
+            } catch (error) {
+                console.error("Error posting article:", error);
+                alert("An error occurred while posting the article.");
+            }
+        }
+
+        async function loadArticles() {
+            try {
+                const response = await fetch("{{ url_for('get_articles') }}");
+                if (response.ok) {
+                    const articles = await response.json();
+                    const articlesList = document.getElementById('articles_list');
+                    articlesList.innerHTML = '';
+
+                    if (articles.length === 0) {
+                        articlesList.innerHTML = '<p>No articles available.</p>';
+                        return;
+                    }
+
+                    articles.forEach(article => {
+                        const articleItem = document.createElement('div');
+                        articleItem.className = 'article-container';
+                        articleItem.onclick = () => viewArticle(article);
+                        articleItem.innerHTML = `
+                            <div class="article-title">${article.title}</div>
+                            <div class="article-author">by ${article.username}</div>
+                        `;
+                        articlesList.appendChild(articleItem);
+                    });
+
+                    // Automatically view the first article if articles exist
+                    viewArticle(articles[0]);
+                } else {
+                    console.error("Failed to load articles.");
+                }
+            } catch (error) {
+                console.error("Error loading articles:", error);
+            }
+        }
+
+        function viewArticle(article) {
+            const articleDetails = document.getElementById('article_details');
+            articleDetails.dataset.title = article.title;
+            articleDetails.dataset.username = article.username;
+            articleDetails.innerHTML = `
+                <div class="article-details-title">${article.title}</div>
+                <div class="article-details-author">by ${article.username}</div>
+                <div class="article-details-content">${article.content}</div>
+            `;
+            if (article.username === "{{ request.args.get('username') }}" || "{{ request.args.get('role') }}" === "admin") {
+                articleDetails.innerHTML += `
+                    <button onclick="editArticle('${article.title}', '${article.username}', '${article.content}')">Modify</button>
+                    <button onclick="deleteArticle('${article.title}', '${article.username}')">Delete</button>
+                `;
+            }
+            loadComments(article.title, article.username);
+        }
+
+        function openEditModal() {
+            document.getElementById('editArticleModal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editArticleModal').style.display = 'none';
+        }
+
+        function editArticle(oldTitle, oldUsername, content) {
+            document.getElementById('editArticleTitle').value = oldTitle;
+            document.getElementById('editArticleContent').value = content;
+            document.getElementById('editArticleModal').dataset.oldTitle = oldTitle;
+            document.getElementById('editArticleModal').dataset.oldUsername = oldUsername;
+            openEditModal();
+        }
+
+        async function updateArticle() {
+            const articleTitle = document.getElementById('editArticleTitle').value;
+            const articleContent = document.getElementById('editArticleContent').value;
+            const oldTitle = document.getElementById('editArticleModal').dataset.oldTitle;
+            const oldUsername = document.getElementById('editArticleModal').dataset.oldUsername;
+            const username = "{{ request.args.get('username') }}";
+            const sessionKey = "{{ request.args.get('sessionKey') }}";
+
+            if (!articleTitle || !articleContent) {
+                alert("Title and content cannot be empty!");
+                return;
+            }
+
+            try {
+                const response = await fetch("{{ url_for('update_article') }}", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        sessionKey: sessionKey,
+                        oldTitle: oldTitle,
+                        oldUsername: oldUsername,
+                        title: articleTitle,
+                        content: articleContent,
+                    }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert("Article updated successfully!");
+                    closeEditModal();
+                    loadArticles();
+                } else {
+                    const errorText = await response.text();
+                    console.error("Failed to update article:", errorText);
+                    alert("Failed to update article. Server response: " + errorText);
+                }
+            } catch (error) {
+                console.error("Error updating article:", error);
+                alert("An error occurred while updating the article.");
+            }
+        }
+
+        async function deleteArticle(title, articleUsername) {
+            const username = "{{ request.args.get('username') }}";
+            const sessionKey = "{{ request.args.get('sessionKey') }}";
+
+            if (!confirm("Are you sure you want to delete this article?")) {
+                return;
+            }
+
+            try {
+                const response = await fetch("{{ url_for('delete_article') }}", {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        sessionKey: sessionKey,
+                        title: title,
+                        articleUsername: articleUsername
+                    }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert("Article deleted successfully!");
+                    loadArticles();
+                } else {
+                    const errorText = await response.text();
+                    console.error("Failed to delete article:", errorText);
+                    alert("Failed to delete article. Server response: " + errorText);
+                }
+            } catch (error) {
+                console.error("Error deleting article:", error);
+                alert("An error occurred while deleting the article.");
+            }
+        }
+
+        async function postComment() {
+            const commentContent = document.getElementById('commentContent').value;
+            const articleTitle = document.getElementById('article_details').dataset.title;
+            const articleUsername = document.getElementById('article_details').dataset.username;
+            const username = "{{ request.args.get('username') }}";
+            const sessionKey = "{{ request.args.get('sessionKey') }}";
+            const commentPublisher = username;
+
+            if (!commentContent) {
+                alert("Comment cannot be empty!");
+                return;
+            }
+
+            try {
+                const response = await fetch("{{ url_for('post_comment') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        sessionKey: sessionKey,
+                        articleTitle: articleTitle,
+                        articleUsername: articleUsername,
+                        content: commentContent,
+                        commentPublisher: commentPublisher
+                    }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert("Comment posted successfully!");
+                    document.getElementById('commentContent').value = '';
+                    loadComments(articleTitle, articleUsername);
+                } else {
+                    const errorText = await response.text();
+                    console.error("Failed to post comment:", errorText);
+                    alert("Failed to post comment. Server response: " + errorText);
+                }
+            } catch (error) {
+                console.error("Error posting comment:", error);
+                alert("An error occurred while posting the comment.");
+            }
+        }
+
+        async function loadComments(title, username) {
+            try {
+                const response = await fetch("{{ url_for('get_comments') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        username: username
+                    })
+                });
+                if (response.ok) {
+                    const comments = await response.json();
+                    const commentsList = document.getElementById('comments_list');
+                    commentsList.innerHTML = '';
+
+                    comments.forEach(comment => {
+                        const commentItem = document.createElement('div');
+                        commentItem.className = 'comment-container';
+                        commentItem.innerHTML = `
+                            <div class="comment-author">${comment.username}:</div>
+                            <pre class="comment-content">${comment.content}</pre>
+                        `;
+                        if (comment.username === "{{ request.args.get('username') }}" || "{{ request.args.get('role') }}" === "admin") {
+                            commentItem.innerHTML += `
+                                <button onclick="deleteComment('${comment.article_title}', '${comment.article_username}', '${comment.username}', '${comment.content}')">Delete Comment</button>
+                            `;
+                        }
+                        commentsList.appendChild(commentItem);
+                    });
+                } else {
+                    console.error("Failed to load comments.");
+                }
+            } catch (error) {
+                console.error("Error loading comments:", error);
+            }
+        }
+
+        async function deleteComment(articleTitle, articleUsername, commentPublisher, content) {
+            const username = "{{ request.args.get('username') }}";
+            const sessionKey = "{{ request.args.get('sessionKey') }}";
+
+            if (!confirm("Are you sure you want to delete this comment?")) {
+                return;
+            }
+
+            try {
+                const response = await fetch("{{ url_for('delete_comment') }}", {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        sessionKey: sessionKey,
+                        articleTitle: articleTitle,
+                        articleUsername: articleUsername,
+                        commentPublisher: commentPublisher,
+                        content: content
+                    }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert("Comment deleted successfully!");
+                    loadComments(articleTitle, articleUsername);
+                } else {
+                    const errorText = await response.text();
+                    console.error("Failed to delete comment:", errorText);
+                    alert("Failed to delete comment. Server response: " + errorText);
+                }
+            } catch (error) {
+                console.error("Error deleting comment:", error);
+                alert("An error occurred while deleting the comment.");
+            }
+        }
+
+        window.postArticle = postArticle;
+        window.closeModal = closeModal;
+        window.viewArticle = viewArticle;
+        window.editArticle = editArticle;
+        window.updateArticle = updateArticle;
+        window.deleteArticle = deleteArticle;
+        window.postComment = postComment;
+        window.loadComments = loadComments;
+        window.deleteComment = deleteComment;
+
+        loadArticles();
+    });
+</script>
+{% endblock %}
+

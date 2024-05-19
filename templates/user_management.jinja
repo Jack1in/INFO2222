@@ -1,0 +1,61 @@
+{% extends 'base.jinja' %}
+
+{% block content %}
+<h1>User Management</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Online Status</th>
+            <th>Muted</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr id="user-{{ user.username }}">
+            <td>{{ user.username|escape }}</td>
+            <td>{{ user.role|escape }}</td>
+            <td>{{ user.online_status }}</td>
+            <td>{{ user.ismuted }}</td>
+            <td>
+                <button onclick="toggleMute('{{ user.username|escape }}', {{ 'true' if user.ismuted else 'false' }})">
+                    {% if user.ismuted %}
+                        Unmute
+                    {% else %}
+                        Mute
+                    {% endif %}
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+function toggleMute(username, isMuted) {
+    let sessionKey = "{{ sessionKey }}";
+    let action = isMuted ? "unmute_user" : "mute_user";
+    
+    console.log(`Action: ${action}, Target User: ${username}`);
+
+    $.ajax({
+        url: `/${action}`,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({ username: "{{ username|escape }}", targetUser: username, sessionKey: sessionKey }),
+        success: function(response) {
+            console.log("Success:", response);
+            alert(response.message);
+            location.reload();  // Reload the page to reflect changes
+        },
+        error: function(xhr, status, error) {
+            console.log("Error:", xhr, status, error);
+            alert("Error processing request.");
+        }
+    });
+}
+</script>
+{% endblock %}
