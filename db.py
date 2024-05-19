@@ -179,6 +179,22 @@ def is_user_muted(username: str) -> bool:
 def get_all_users():
     with Session(engine) as session:
         return session.query(User).all()
+    
+def change_user_role(username, new_role):
+    try:
+        with Session(engine) as session:
+            user = session.query(User).filter_by(username=username).first()
+            if user:
+                user.role = new_role
+                session.commit()
+                print(f"Changed role of {username} to {new_role}")
+                return True
+            else:
+                return False
+    except Exception as e:
+        print(f"Error changing role: {e}")
+        return False
+
 
 # Call the function to insert the staff account
 insert_staff_account()

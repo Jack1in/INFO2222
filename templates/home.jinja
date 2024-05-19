@@ -25,6 +25,7 @@
 <nav>
     <ol style="float: right">
         <li style="display:inline-block">Username: {{ username|escape }}</li>
+        <li style="display:inline-block" id="user-role">Role: {{ role|escape }}</li>
         <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
     </ol>
     <ul style="float: left">
@@ -71,6 +72,7 @@
 </nav>
 
 
+
 <h1>Messaging App</h1>
 
 <main>
@@ -106,6 +108,9 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/static/js/libs/js.cookie.min.js"></script>
 <script>
+
+    
+
     let privateKey;
     async function initialize() {
         let username = "{{ username|escape}}";
@@ -155,6 +160,14 @@
     socket.on("incoming", (msg, color="black") => {
         add_message(msg, color);
     });
+
+    socket.on('role_update', (data) => {
+        if (data.username === "{{ username|escape }}") {
+            document.getElementById('user-role').innerText = `Role: ${data.role}`;
+        }
+    });
+
+    
 
     socket.on('update_room_users', (users) => {
         roomUsers = users;
@@ -532,7 +545,23 @@ function acceptRequest(requestUsername) {
         }
     });
 
+    function changeRole(username) {
+        let newRole = document.getElementById(`role-select-${username}`).value;
+        let sessionKey = "{{ sessionKey }}";
 
+        $.ajax({
+            url: "/change_role",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ targetUser: username, newRole: newRole, sessionKey: sessionKey }),
+            success: function(response) {
+                alert(response.message);
+            },
+            error: function(xhr, status, error) {
+                alert("Error changing role: " + xhr.responseText);
+            }
+        });
+    }
 
 </script>
 {% endblock %}

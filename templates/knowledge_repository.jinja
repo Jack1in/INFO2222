@@ -144,7 +144,7 @@
 </style>
 
 <nav>
-    <button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Back to Home page</button>
+    <button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Home Page</button>
     <ol style="float: right">
         <li style="display:inline-block">Username: {{ username|escape }}</li>
         <li style="display:inline-block"><button onclick="logout()">Logout</button></li>

@@ -172,9 +172,11 @@ def get_messages(username, chat_partner,room_id):
 def home():
     username = request.args.get("username")
     sessionKey = request.args.get('sessionKey')
-    role = request.args.get('role')
-    if request.args.get("sessionKey") != session.get(username):
+    if session.get(username) != sessionKey:
         return redirect(url_for("login"))
+    
+    user = db.get_user(username)
+    role = user.role if user else None
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
     return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list, sessionKey=sessionKey, role=role)
@@ -612,6 +614,31 @@ def get_mute_status(username):
     if user:
         return jsonify({"ismuted": user.ismuted}), 200
     return jsonify({"error": "User not found"}), 404
+
+@app.route('/change_role', methods=['POST'])
+def change_role():
+    data = request.get_json()
+    target_user = data.get('targetUser')
+    new_role = data.get('newRole')
+    session_key = data.get('sessionKey')
+
+    username = data.get('username') 
+    if session_key != session.get(username):
+        return jsonify({"error": "Invalid session key"}), 403
+
+    user = db.get_user(username)
+    if user.role != 'admin':
+        return jsonify({"error": "Permission denied"}), 403
+
+    result = db.change_user_role(target_user, new_role)
+    
+    if result:
+        # Emit socket event to notify clients about the role change
+        socketio.emit('role_update', {'username': target_user, 'role': new_role})
+        return jsonify({"message": "Role changed successfully"}), 200
+    else:
+        return jsonify({"error": "Failed to change role"}), 500
+
 
 if __name__ == '__main__':
     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
