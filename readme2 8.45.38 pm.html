@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Development Report For INFO2222 Project&colon;Usability</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="development-report-for-info2222-projectusability">Development Report For INFO2222 Project:Usability</h1>
+<h2 id="step1-user-investigationpact-analysis">Step1: User Investigation/PACT ANALYSIS</h2>
+<p>To conduct the PACT (People, Activities, Contexts, Technologies) analysis, a Google Form as (<a href="https://docs.google.com/forms/u/0/d/e/1FAIpQLScA91j1xsRzqu1iCsfSLHOXerUZcJicqLlEjfBDLPCdfW7DTg/formResponse">https://docs.google.com/forms/u/0/d/e/1FAIpQLScA91j1xsRzqu1iCsfSLHOXerUZcJicqLlEjfBDLPCdfW7DTg/formResponse</a>) was created and distributed among the target user group, which consists of students. The form contained questions about the respondents' social media usage habits, preferences, and desired features. The responses were collected and analyzed to identify patterns and trends, which were then used to create the following report.</p>
+<p>Apart from the google survey, we investigate past paper and research to understand the user's needs and preferences.
+We also create a persona to represent the target user group and provide a detailed analysis of the findings.</p>
+<h3 id="people">People</h3>
+<ul>
+<li><strong>User Group</strong>: Students, including those just starting their program of studies, final year students, and students transferring into a computing program from other schools.</li>
+<li><strong>Characteristics</strong>:
+<ul>
+<li><strong>Age Range</strong>: 18-25 years old.</li>
+<li><strong>Role</strong>: All respondents are students.</li>
+<li><strong>Social Media Usage</strong>: Most use Discord, with some using Instagram.</li>
+<li><strong>Average Daily Social Media Usage Time</strong>: Primarily between 2-4 hours and 4-6 hours.
+<img src="file:////Users/linjack/INFO2222/report_image/character.png" alt="Character 1"></li>
+</ul>
+</li>
+</ul>
+<h3 id="activities">Activities</h3>
+<ul>
+<li><strong>Online Activities</strong>:
+<ul>
+<li>Using social media to interact with friends and classmates, sharing information and resources.</li>
+<li>Valuing positive features such as interface design, functionality, and security.</li>
+<li>Enjoying features like anonymous posting, categorizing posts, and thread filtering.</li>
+</ul>
+</li>
+<li><strong>Time Allocation</strong>:
+<ul>
+<li>Daily social media usage mainly falls between 2-6 hours, probably in late afternoon or evening.
+<img src="file:////Users/linjack/INFO2222/report_image/character2.png" alt="Character 2"></li>
+</ul>
+</li>
+</ul>
+<h3 id="contexts">Contexts</h3>
+<ul>
+<li><strong>Usage Context</strong>:
+<ul>
+<li>Students likely use social media during study breaks or after classes to connect with friends and classmates.</li>
+</ul>
+</li>
+<li><strong>Goals</strong>:
+<ul>
+<li>Seeking academic support, social interaction, and sharing and obtaining information.</li>
+</ul>
+</li>
+</ul>
+<h3 id="technologies">Technologies</h3>
+<ul>
+<li><strong>Devices Used</strong>:
+<ul>
+<li>Primarily smartphones and personal computers.</li>
+<li>Requires a stable internet connection.</li>
+</ul>
+</li>
+<li><strong>Desired Features</strong>: (in order of priority)
+<ul>
+<li>Ability to withdraw or modify posts.</li>
+<li>Separate posts by category.</li>
+<li>Anonymous posting.</li>
+<li>Dark mode option.
+<img src="file:////Users/linjack/INFO2222/report_image/feature1.png" alt="Feature 1">
+<img src="file:////Users/linjack/INFO2222/report_image/feature2.png" alt="Feature 2"></li>
+</ul>
+</li>
+</ul>
+<h3 id="past-paper-and-research">Past Paper and Research</h3>
+<p>Social media users are predominantly young people with basic technology skills, commonly using devices such as smartphones and laptops (King, 2021). For this demographic, design is highly important; they place significant value on the app's aesthetics, compatibility across devices, and robust security features. Ensuring that the social media platform is visually appealing, user-friendly, and secure can greatly enhance their experience and satisfaction (Moshagen &amp; Thielsch, 2010).</p>
+<h4 id="persona-dedicated-computer-science-student">Persona: Dedicated Computer Science Student</h4>
+<h4 id="name">Name</h4>
+<p>Alex Johnson</p>
+<h4 id="current-role">Current Role</h4>
+<p>Bachelor of Advanced Computing student</p>
+<h4 id="demographics">Demographics</h4>
+<ul>
+<li><strong>Age</strong>: 21</li>
+<li><strong>Education</strong>: Undergraduate student in Advanced Computing</li>
+<li><strong>Background</strong>: High school diploma with strong focus on mathematics and computer science</li>
+<li><strong>Area of Interest</strong>: Software development, artificial intelligence, and data science</li>
+</ul>
+<h4 id="goals-and-tasks">Goals and Tasks</h4>
+<ul>
+<li><strong>Motivation</strong>: To gain in-depth knowledge and practical experience in cutting-edge computing technologies</li>
+<li><strong>Tasks</strong>:
+<ul>
+<li>Discuss lectures and assignments</li>
+<li>Participate in coding competitions</li>
+<li>Seek internships and networking opportunities</li>
+</ul>
+</li>
+</ul>
+<h4 id="environment">Environment</h4>
+<ul>
+<li><strong>Tech Savvy</strong>: Highly tech-savvy</li>
+<li><strong>Devices</strong>: Laptop (high-performance), smartphone, access to university computer labs and libraries</li>
+</ul>
+<h4 id="quote">Quote</h4>
+<p>&quot;I am passionate about solving real-world problems with technology and am constantly looking for new challenges to improve my skills.&quot;</p>
+<h3 id="investigation-findings-and-recommendations">Investigation Findings and Recommendations</h3>
+<p>Based on the analysis, we can draw the following conclusions and recommendations:</p>
+<ol>
+<li><strong>Clear Target User Group</strong>: All respondents are students aged 18-25, mainly using Discord and Instagram, with daily social media usage between 2-6 hours.</li>
+<li><strong>Specific Feature Needs</strong>: Users want additional features such as post withdrawal or modification, anonymous posting and dark mode.</li>
+<li><strong>Design Suggestions</strong>: When designing a new social media platform or improving an existing one, focus on aesthetic interface, practical functionality, security, and user privacy protection. Additionally, consider adding the desired features to enhance user experience.</li>
+</ol>
+<h2 id="step-2-navigation-design">Step 2: Navigation design</h2>
+<h3 id="card-sorting">Card Sorting</h3>
+<p><img src="file:////Users/linjack/INFO2222/report_image/card1.png" alt="Card1">
+To better understand the preferences and needs of our users for the web chat application, we conducted a card sorting activity with a group from the INFO2222 community. In this activity, we provided participants with basic elements, including various functionalities and interface components such as login, sign-up, navigation, viewing chatrooms, sending messages, dark mode, and more. The participants were encouraged to create their own tags and add new elements to categorize these items, allowing for a more flexible and user-driven organization.</p>
+<p>The result is as follows:
+<img src="file:////Users/linjack/INFO2222/report_image/card2.png" alt="Card2"></p>
+<h3 id="site-map-design">Site Map design</h3>
+<p>The card sorting activity revealed that the participants divide functionalities into five main group as:</p>
+<h4 id="startpoint">StartPoint</h4>
+<p>Elements: Login, Sign-up, Navigation, Guides, Dark Mode</p>
+<p>Analysis: Participants identified basic entry points and general navigation elements as part of the initial interaction with the application. This highlights the importance of having a user-friendly and accessible starting interface.</p>
+<h4 id="homepage">HomePage</h4>
+<p>Elements: Start Chat, Add/Delete Friend, Viewing Friend List, Log out, Dark Mode</p>
+<p>Analysis: The homepage is seen as a central hub where users can quickly access primary functionalities like starting a chat, managing friends, and viewing the friend list. The inclusion of “Dark Mode” in multiple categories suggests its high importance across different sections.</p>
+<h4 id="post-page">Post Page</h4>
+<p>Elements: Public Post, Filter, Retrieve/Modify Post, Report, Anonymous Chat/Post, Log out, Dark Mode</p>
+<p>Analysis: The post page is recognized for its focus on content management and user interactions. Features such as public posting, filtering, and modifying posts are crucial for this section, indicating that users value flexibility and control over their content.</p>
+<h4 id="security-page">Security Page</h4>
+<p>Elements: Reset Password, Verifying and Security, Dark Mode, Log out</p>
+<p>Analysis: Security is a significant concern for users, with emphasis on functionalities related to password management and security verification.</p>
+<h4 id="chatroom">Chatroom</h4>
+<p>Elements: Viewing Chatroom, Send Message, Dark Mode, Log out</p>
+<p>Analysis: The chatroom is a dedicated space for real-time communication, with a focus on viewing and sending messages. Consistency in including “Dark Mode” and “Log out” indicates that these features are seen as essential across the application.</p>
+<p>Based on these investigations, we develop a basic structure as the site map here.
+<img src="file:////Users/linjack/INFO2222/report_image/sitemap.png" alt="SiteMap"><br>
+The web-app will involve a multi-layered architecture designed to provide a seamless and secure user experience, structured according to the site map. At the top level, the Login/Signup page serves as the entry point, ensuring that only authenticated users can access the application.</p>
+<p>Home Page
+Once authenticated, users land on the Home page, which acts as the central hub for navigation. From here, users can access various sections of the application:</p>
+<p>Friends Pages
+Start Chat Room: Allows users to initiate new chat rooms.
+Handle Friend Request: Manages incoming and outgoing friend requests.
+View Friends: Displays a list of friends.
+Chat Room: Contains sub-pages for viewing chat rooms and sending messages.
+Public Posts
+View Single Post: Enables users to view individual posts.
+Publish Post: Allows users to create and publish new posts.
+Anonymous Mode: Offers an option to post anonymously.
+Filter: Provides functionality to filter posts based on various criteria.
+Security
+Reset Password: Allows users to reset their passwords, enhancing account security.
+For All Pages
+Guide: Provides user guides and documentation.
+Log Out: Enables users to securely log out of the application.
+Dark Mode: Offers a toggle option for dark mode, enhancing the user interface experience.</p>
+<h3 id="step-3-design-evaluate">Step 3: Design-Evaluate</h3>
+<h4 id="feature-prioritization">Feature Prioritization</h4>
+<p>Based on the feedback , we have compiled the following prioritized list of features. These features are intended to improve the overall user experience and usability of the ChatConnect application:</p>
+<p>Dark Mode
+Anonymous Posting
+Modify and Retrieve Posts</p>
+<p>While not all features may be developed within the scope of this project, this list serves as a 'wish list' for future enhancements.</p>
+<h4 id="design-principles">Design Principles</h4>
+<p>Steps to Determine the Best Design</p>
+<p>Brainstorming and Sketching: Our team began by brainstorming potential layouts and features. We sketched various designs for key interfaces such as the chat window and post page.
+Prototype Creation: Based on our sketches, we created low-fidelity digital prototypes using Figma. These prototypes focused on layout and functionality without detailed design elements.
+Guerrilla Testing: We conducted guerrilla testing with target users, including both team members and one participant outside our team. Each team member facilitated a test session to gather diverse feedback.
+Feedback Analysis: We analyzed the feedback to identify common usability issues and preferences.</p>
+<h4 id="wireframe">Wireframe</h4>
+<p><img src="file:////Users/linjack/INFO2222/report_image/wireframe.png" alt="wireframe">
+We created a wireframe to visualize the layout and structure of the ChatConnect application. The wireframe includes key elements such as the chat window, post page, and navigation bar. This visual representation helps us understand the overall flow and interaction within the application.</p>
+<h4 id="guerrilla-testing">Guerrilla Testing</h4>
+<p>We conducted guerrilla testing with target users to gather feedback on the wireframe prototype. The testing sessions involved offering the wireframe and site map to participants and asking them to answer questions on how to navigate the application (<a href="https://docs.google.com/forms/d/1fqeB0CirUTQG9yBnO1nHQJAleF59D7RVtiFB5RT3rBc/viewanalytics">https://docs.google.com/forms/d/1fqeB0CirUTQG9yBnO1nHQJAleF59D7RVtiFB5RT3rBc/viewanalytics</a>), locate specific features, and provide general feedback on the design.</p>
+<p>The result for the testing is as follows:
+<img src="file:////Users/linjack/INFO2222/report_image/test1.png" alt="test1">
+<img src="file:////Users/linjack/INFO2222/report_image/test2.png" alt="test2">
+<img src="file:////Users/linjack/INFO2222/report_image/test3.png" alt="test3"></p>
+<p>The result of the testing indicates that the wireframe design is generally well-received by users. Participants found the layout intuitive and easy to navigate, with positive feedback on the visual hierarchy and organization of elements. However, some users suggested minor improvements, such as the homepage is too crowded.</p>
+<h2 id="step-4-prototype-to-real-web-server">Step 4: Prototype to Real Web Server</h2>
+<h3 id="incremental-development-plan">Incremental Development Plan</h3>
+<p><strong>Iteration #1: Weeks 9-10</strong></p>
+<p><strong>Features Completed:</strong></p>
+<ol>
+<li><strong>Multi User Chat Interface</strong>:
+<ul>
+<li>Developed a real-time chat interface that allows multiple users to communicate simultaneously.</li>
+</ul>
+</li>
+<li><strong>Different permission levels</strong>:
+<ul>
+<li>Implemented user authentication and authorization to manage user access and permissions.</li>
+</ul>
+</li>
+<li><strong>Knowledge/Public Post</strong>:
+<ul>
+<li>Added functionality for users to post public.</li>
+<li></li>
+</ul>
+</li>
+</ol>
+<p><strong>User Testing Results:</strong></p>
+<ul>
+<li><strong>Think Aloud Test</strong>: Conducted think aloud testing with five users to gather feedback on the initial features.</li>
+<li><strong>Feedback</strong>:
+<ul>
+<li>Positive: Users found the chat interface responsive and easy to use. The permission levels were appreciated for managing user access.</li>
+<li>Improvements: Users suggested adding a dark mode option and enhancing the post categorization feature.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Prioritized Features for Iteration #2</strong>:</p>
+<ol>
+<li><strong>Anonymous Posting</strong>:
+<ul>
+<li>Allow users to post messages anonymously in the chat.</li>
+</ul>
+</li>
+<li><strong>Modify and Retrieve Posts</strong>:
+<ul>
+<li>Enable users to edit and retrieve their posts.</li>
+</ul>
+</li>
+<li>** Improve design and aesthetics**:
+<ul>
+<li>Enhance the visual appeal of the interface with a focus on user experience.</li>
+</ul>
+</li>
+</ol>
+<p><strong>Iteration #2: Weeks 11-12</strong></p>
+<p><strong>Features Completed:</strong></p>
+<ol>
+<li><strong>Anonymous Posting</strong>:
+<ul>
+<li>Implemented the ability for users to post messages anonymously in chatrooms.</li>
+</ul>
+</li>
+<li><strong>Modify and Retrieve Posts</strong>:
+<ul>
+<li>Added functionality for users to edit and retrieve their posts.</li>
+</ul>
+</li>
+<li><strong>Dark Mode</strong>:
+<ul>
+<li>Added a toggle option for users to switch between light and dark modes.</li>
+</ul>
+</li>
+<li><strong>Improved Design</strong>:
+<ul>
+<li>Enhanced the visual aesthetics of the interface based on user feedback.
+** User Testing Results:**</li>
+</ul>
+</li>
+</ol>
+<ul>
+<li><strong>Think Aloud Test</strong>: Conducted think aloud testing with five users to gather feedback on the new features.</li>
+<li><strong>Feedback</strong>:
+<ul>
+<li>Positive: Users appreciated the addition of anonymous posting and the dark mode option.</li>
+<li>Improvements: Users suggested further enhancements to the post modification feature and additional customization options.</li>
+<li>Concerns: Some users think current password is too easy to be brute-forced.</li>
+</ul>
+</li>
+</ul>
+<h3 id="outline-of-evaluations-conducted">Outline of Evaluations Conducted</h3>
+<p><strong>Evaluation Methods:</strong></p>
+<ol>
+<li><strong>Think Aloud Tests</strong>:
+<ul>
+<li>Users were asked to verbalize their thoughts while interacting with the prototype.</li>
+<li>Observations were made on user behavior, ease of navigation, and any difficulties encountered.</li>
+</ul>
+</li>
+<li><strong>Performance Metrics</strong>:
+<ul>
+<li>Monitored the responsiveness and load times of the chat interface during testing.</li>
+</ul>
+</li>
+</ol>
+<p><strong>Key Findings:</strong></p>
+<ul>
+<li><strong>Ease of Use</strong>: Most users found the interface intuitive and easy to navigate.</li>
+<li><strong>Feature Requests</strong>: Users frequently requested additional customization options and better notification management.</li>
+<li><strong>Security Concerns</strong>: Users appreciated the added security measures but suggested making the 2FA setup process simpler.</li>
+</ul>
+<h3 id="future-development-plan">Future Development Plan</h3>
+<p>Due to time constraints, some features were not implemented in the current version of the application. Future development plans include:</p>
+<h3 id="team-collaboration-and-contributions">Team Collaboration and Contributions</h3>
+<p><strong>Team Work Summary</strong>:</p>
+<ul>
+<li><strong>Collaboration</strong>: The team worked cohesively, leveraging regular meetings and communication tools to stay aligned on goals and progress.</li>
+</ul>
+<p><strong>Self-Evaluation</strong>:</p>
+<ul>
+<li><strong>Strengths</strong>: Effective communication, clear role assignments, and regular feedback loops.</li>
+<li><strong>Areas for Improvement</strong>: Need to enhance project management practices to better handle task prioritization and deadlines.</li>
+</ul>
+<h2 id="references">References</h2>
+<p>David Lee King. (2021). Social Media Use in 2021. In David Lee King [BLOG]. Newstex.
+Moshagen, M., &amp; Thielsch, M. T. (2010). Facets of visual aesthetics. International Journal of Human-Computer Studies, 68(10), 689–709. <a href="https://doi.org/10.1016/j.ijhcs.2010.05.006">https://doi.org/10.1016/j.ijhcs.2010.05.006</a></p>
+
+            
+            
+        </body>
+        </html>
