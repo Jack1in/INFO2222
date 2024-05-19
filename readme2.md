@@ -202,7 +202,7 @@ The result of the testing indicates that the wireframe design is generally well-
    - Allow users to post messages anonymously in the chat.
 2. **Modify and Retrieve Posts**:
    - Enable users to edit and retrieve their posts.
-3. ** Improve design and aesthetics**:
+3. **Improve design and aesthetics**:
    - Enhance the visual appeal of the interface with a focus on user experience.
 
 **Iteration #2: Weeks 11-12**
