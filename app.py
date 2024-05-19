@@ -297,6 +297,19 @@ def knowledge_repository():
         return redirect(url_for("login"))
     return render_template('knowledge_repository.jinja', username=username, sessionKey=sessionKey, role=role)
 
+# route for chat room
+@app.route('/chat')
+def chat():
+    username = request.args.get('username')
+    sessionKey = request.args.get('sessionKey')
+    role = request.args.get('role')
+    if session.get(username) != sessionKey:
+        return redirect(url_for("login"))
+    friend_requests = db.get_friend_requests(username)
+    friends_list = db.get_friends_list(username)
+    return render_template('chat.jinja', username=username,friend_requests = friend_requests, friends_list=friends_list, sessionKey=sessionKey, role=role)
+
+
 @app.route('/post_article', methods=['POST'])
 def post_article():
     try:

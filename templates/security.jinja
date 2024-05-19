@@ -1,0 +1,114 @@
+{% extends 'base.jinja' %}
+
+{% block content %}
+<style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+
+    nav {
+        border-bottom: 1px solid black;
+        overflow: auto;
+        padding: 10px;
+    }
+
+    nav button {
+        margin-left: 10px;
+    }
+
+    .tabs {
+        margin-top: 20px;
+    }
+
+    .tabs button {
+        margin-right: 10px;
+    }
+
+    .username {
+        font-size: 24px;
+        font-weight: bold;
+        margin-top: 20px;
+    }
+
+    .reset-container {
+        margin-top: 40px;
+    }
+
+    .reset-container button {
+        margin-top: 10px;
+    }
+</style>
+
+<body>
+    <!-- Navbar with dark mode and logout button -->
+    <nav>
+        <button onclick="logout()">Log out</button>
+    </nav>
+
+    <!-- Tabs for navigation -->
+    <div class="tabs">
+        <button onclick="navigateTo('navigation')">Navigation</button>
+        <button onclick="navigateTo('chat')">Chat with friends</button>
+        <button onclick="navigateTo('posts')">Public Posts</button>
+        <button onclick="navigateTo('security')" style="background-color: #ddd;">Security</button>
+        <button onclick="navigateTo('guide')">Guide</button>
+    </div>
+
+    <!-- User's name -->
+    <div class="username">{{ username }}</div>
+
+    <!-- Password reset section -->
+    <div class="reset-container">
+        <button onclick="resetPassword()">Reset Password</button>
+        <input id="new_password" type="password" placeholder="New password">
+        <p>More options available in future</p>
+    </div>
+
+    <script>
+        function toggleDarkMode() {
+            // Function to toggle dark mode
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function logout() {
+            // Function to handle logout
+            window.location.href = '{{ url_for("logout") }}';
+        }
+
+        function navigateTo(page) {
+            // Function to navigate to different pages
+            window.location.href = `{{ url_for(page) }}`;
+        }
+
+        async function resetPassword() {
+            const newPassword = document.getElementById('new_password').value;
+            if (newPassword.length < 4) {
+                alert("Password must be at least 4 characters long.");
+                return;
+            }
+
+            try {
+                const response = await fetch('{{ url_for("reset_password") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: '{{ username }}',
+                        new_password: newPassword
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Password reset successful.');
+                } else {
+                    alert('Password reset failed.');
+                }
+            } catch (error) {
+                console.error('Error resetting password:', error);
+                alert('Password reset failed.');
+            }
+        }
+    </script>
+</body>
+{% endblock %}

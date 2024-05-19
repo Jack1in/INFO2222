@@ -59,6 +59,9 @@
         <li>
             <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey, role=role) }}'">Knowledge Repository</button>
         </li>
+        <li>
+            <button onclick="window.location.href='{{ url_for('chat', username=username, sessionKey=sessionKey, role=role) }}'">Chat</button>
+        </li>
         {% if role == 'admin' %}
         <li>
             <button onclick="window.location.href='{{ url_for('user_management', username=username, sessionKey=sessionKey, role=role) }}'">User Management</button>
