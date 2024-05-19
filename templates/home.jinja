@@ -26,6 +26,9 @@
     <ol style="float: right">
         <li style="display:inline-block">Username: {{ username|escape }}</li>
         <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
+        {% if role == 'admin' %}
+        <li style="display:inline-block"><button onclick="window.location.href='{{ url_for('user_management', username=username, sessionKey=sessionKey) }}'">User Management</button></li>
+        {% endif %}
     </ol>
     <ul style="float: left">
         <li><strong>Friend Requests:</strong>

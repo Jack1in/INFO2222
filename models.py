@@ -46,6 +46,9 @@ class User(Base):
     public_key: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String, nullable=False,default='user')
     online_status: Mapped[bool] = mapped_column(Boolean, default=False)
+    muted: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    
     friends = relationship(
         'User',
         secondary=friend_association,

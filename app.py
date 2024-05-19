@@ -168,12 +168,14 @@ def get_messages(username, chat_partner,room_id):
 def home():
     username = request.args.get("username")
     sessionKey = request.args.get('sessionKey')
-    role = request.args.get('role')
     if request.args.get("sessionKey") != session.get(username):
         return redirect(url_for("login"))
+    user = db.get_user(username)
+    role = user.role if user else 'user'  
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
     return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list, sessionKey=sessionKey, role=role)
+
 
 @app.route("/send_request", methods=["POST"])
 def send_request():
@@ -531,6 +533,43 @@ def delete_comment():
             file.truncate()
 
         return jsonify({"message": "Comment deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# 用户管理页面
+@app.route('/user_management')
+def user_management():
+    username = request.args.get('username')
+    sessionKey = request.args.get('sessionKey')
+    if request.args.get("sessionKey") != session.get(username):
+        return redirect(url_for("login"))
+    return render_template('user_management.jinja', username=username, sessionKey=sessionKey)
+
+@app.route('/get_users', methods=['GET'])
+def get_users():
+    try:
+        users = db.get_all_users()
+        return jsonify(users), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/toggle_mute_user', methods=['POST'])
+def toggle_mute_user():
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request does not contain JSON"}), 400
+        
+        data = request.get_json()
+        username = data.get('username')
+        sessionKey = data.get('sessionKey')
+        target_username = data.get('target_username')
+        mute = data.get('mute')
+
+        if session.get(username) != sessionKey:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        result = db.toggle_mute_user(target_username, mute)
+        return jsonify({"message": result}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

@@ -151,6 +151,69 @@ def insert_staff_account():
         print(f"User '{username}' already exists.")
         
 
+def get_all_users():
+    with Session(engine) as session:
+        users = session.query(User).all()
+        return [{'username': user.username, 'role': user.role, 'muted': user.muted} for user in users]
 
+def toggle_mute_user(username: str, mute: bool) -> str:
+    with Session(engine) as session:
+        user = session.get(User, username)
+        if user:
+            user.muted = mute
+            session.commit()
+            return "User muted" if mute else "User unmuted"
+        return "User not found"
+
+# Insert a staff account after the database is created
+def insert_staff_account():
+    username = "staff_user"
+    password = "staff_password"
+    role = "admin"
+    if get_user(username) is None:
+        # Generate key pair
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+        public_key = private_key.public_key()
+
+        # Convert keys to PEM format
+        private_key_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        ).decode('utf-8')
+
+        public_key_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode('utf-8')
+
+        # Store the private key in a secure manner (here we just print it)
+        print(f"Private Key (store this securely): {private_key_pem}")
+
+        # First, hash the password using SHA-256
+        sha256_hashed_password = sha256(password.encode('utf-8')).hexdigest()
+
+        # Then, hash the SHA-256 hashed password using bcrypt
+        hashed_password_twice = bcrypt.hashpw(sha256_hashed_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        # Insert user with public key
+        print(f"Inserting user {username} with role {role}")
+        insert_user(username, hashed_password_twice, public_key_pem, role)
+
+        # Verify insertion by fetching the user and printing details
+        user = get_user(username)
+        if user:
+            print(f"User '{user.username}' inserted successfully.")
+            print(f"Public Key: {user.public_key}")
+            print(f"Role: {user.role}")
+        else:
+            print("Failed to insert user.")
+    else:
+        print(f"User '{username}' already exists.")
+        
+        
 # Call the function to insert the staff account
 insert_staff_account()
