@@ -1,20 +1,107 @@
 {% extends 'base.jinja' %}
-{% block content %}
-<h1>Sign Up</h1>
-<p>Username</p>
-<input id="username" />
-<p>Password</p>
-<input id="password" type="password" />
-<p>Admin Code (optional)</p>
-<input id="adminCode" type="password" />
-<button id="signupButton">Sign up</button>
 
-<script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+
+        .signup-container {
+            display: flex;
+            width: 800px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-section {
+            width: 60%;
+            padding-right: 20px;
+        }
+
+        .form-section {
+            width: 40%;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+        }
+
+        p {
+            margin: 10px 0;
+            padding: 10px;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 5px 0 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+
+        .guide {
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <div class="info-section">
+            <h2>The best way to communicate</h2>
+            <p>Welcome to ChatConnect, the ultimate web chat application designed to enhance your online communication experience. Whether you're looking to connect with friends, participate in lively group discussions, or ensure your conversations are secure.</p>
+            <div class="guide">
+                <a href="#" onclick="showGuide()">See guide</a>
+            </div>
+        </div>
+        <div class="form-section">
+            <h1>Sign Up</h1>
+            <p>Quick Sign Up</p>
+            <p>Your account name</p>
+            <input id="username" />
+            <p>Pick a password (4-20 characters)</p>
+            <input id="password" type="password" />
+            <button onclick="signup()">Sign Up</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
+    <script>
         // Utility function to check if a URL is valid for redirection
         function isValidURL(string) {
             return string.startsWith("/");
@@ -23,9 +110,8 @@
         // Function to handle user sign up
         async function signup() {
             try {
-                const username = $("#username").val();
-                const password = $("#password").val();
-                const adminCode = $("#adminCode").val();
+                const username = document.getElementById("username").value;
+                const password = document.getElementById("password").value;
 
                 if (password.length < 4) {
                     alert("Password must be at least 4 characters long.");
@@ -51,7 +137,7 @@
                 };
 
                 // Generate key pair using the seeded PRNG
-                const keypair = forge.pki.rsa.generateKeyPair({ bits: 2048, prng: prng });
+                const keypair = forge.pki.rsa.generateKeyPair({bits: 2048, prng: prng});
 
                 // Convert keys to PEM format
                 const publicKeyPem = forge.pki.publicKeyToPem(keypair.publicKey);
@@ -83,8 +169,11 @@
             }
         }
 
-        // Attach the signup function to the button click event
-        $("#signupButton").click(signup);
-    });
-</script>
+        // Function to show guide (dummy function for demonstration)
+        function showGuide() {
+            alert("Guide will be shown here.");
+        }
+    </script>
+</body>
+</html>
 {% endblock %}

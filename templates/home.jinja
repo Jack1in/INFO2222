@@ -131,6 +131,8 @@
         // room_id is undefined if the user hasn't joined a room
         // we early return in this case
         initialize();
+        // emit disconnect event if the user has joined a room
+        socket.emit("disconnect");
         if (Cookies.get("room_id") == undefined) {
             return;
         }
@@ -154,6 +156,8 @@
     socket.on('update_room_users', (users) => {
         roomUsers = users;
         console.log("Updated room users:", roomUsers);
+        // empty the message box
+        $("#message_box").empty();
         for (let user of roomUsers) {
             if (user != username)
                 loadAndDisplayMessages(username, user);
@@ -308,12 +312,18 @@
             // If the user is not muted, proceed to join the room
             $("#message_box").empty();
             socket.emit("join", username, receiver, (res) => {
-                res = JSON.parse(res);
-                room_id = res.room;
-                roomUsers = res.users;
-                Cookies.set("room_id", room_id);
-                $("#chat_box").hide();
-                $("#input_box").show();
+                // if res is a string then it is an error message
+                try{
+                    res = JSON.parse(res);
+                    room_id = res.room;
+                    roomUsers = res.users;
+                    Cookies.set("room_id", room_id);
+                    $("#chat_box").hide();
+                    $("#input_box").show();
+                }
+                catch(err){
+                    alert(res);
+                }
             });
         } catch (error) {
             console.error('Error checking mute status:', error);
@@ -519,7 +529,7 @@ function acceptRequest(requestUsername) {
         }
     });
 
-    
+
 
 </script>
 {% endblock %}

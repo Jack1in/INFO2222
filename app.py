@@ -37,6 +37,8 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
+
+
 with open('config.json', 'r') as json_file:
     config = json.load(json_file)
     app.config['ADMIN_CODE_HASH'] = config['admin_code_hash']
@@ -292,6 +294,20 @@ def knowledge_repository():
         return redirect(url_for("login"))
     return render_template('knowledge_repository.jinja', username=username, sessionKey=sessionKey, role=role)
 
+
+# route for chat room
+@app.route('/chat')
+def chat():
+    username = request.args.get('username')
+    sessionKey = request.args.get('sessionKey')
+    role = request.args.get('role')
+    if session.get(username) != sessionKey:
+        return redirect(url_for("login"))
+    friend_requests = db.get_friend_requests(username)
+    friends_list = db.get_friends_list(username)
+    return render_template('chat.jinja', username=username,friend_requests = friend_requests, friends_list=friends_list, sessionKey=sessionKey, role=role)
+
+
 @app.route('/post_article', methods=['POST'])
 def post_article():
     try:
@@ -345,8 +361,7 @@ def get_articles():
         return jsonify(articles), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
+    
 @app.route('/update_article', methods=['PUT'])
 def update_article():
     try:
@@ -386,7 +401,6 @@ def update_article():
         return jsonify({"message": "Article updated successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/delete_article', methods=['DELETE'])
 def delete_article():

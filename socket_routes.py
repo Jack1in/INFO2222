@@ -107,12 +107,12 @@ def join(sender_name, receiver_name):
 
     # if the user is already inside of a room 
     if room_id is not None:
-        # if the receiver is room with another user
-        if room.get_users!=None and room.get_users(room_id)[0] != sender_name and room.get_users(room_id)[0] != receiver_name:
-            return "User is already in a chat with someone else."
-        if (room.get_users(room_id).__sizeof__()>1):
-            if room.get_users(room_id)[1] != sender_name and room.get_users(room_id)[1] != receiver_name:
-                return "User is already in a chat with someone else."
+        # check if the user is friend for all the users in the chat room
+        for user in room.get_users(room_id):
+            # db.get_friends_list(user) returns a list of user objects, check if sender is any of object.username
+            username_list = [user['username'] for user in db.get_friends_list(user)]
+            if sender_name not in username_list and user != sender_name:
+                return "You can only chat with friends!"
         room.join_room(sender_name, room_id)
         join_room(room_id)
         # emit to everyone in the room except the sender

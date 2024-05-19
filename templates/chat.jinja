@@ -1,0 +1,501 @@
+{% extends 'base.jinja' %}
+
+{% block content %}
+<style>
+    nav {
+        border-bottom: 1px solid black;
+        overflow: auto;
+    }
+
+    #message_box {
+        border: 1px solid black;
+        height: 400px;
+        width: 800px;
+        overflow: auto;
+        padding: 2px;
+    }
+
+    .text {
+        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+</style>
+
+<nav>
+    <button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Back to Home page</button>
+</nav>
+
+<!-- Navbar, displaying the username and friend functionalities -->
+<nav>
+    <ol style="float: right">
+        <li style="display:inline-block">Username: {{ username|escape }}</li>
+        <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
+    </ol>
+    <ul style="float: left">
+        <li><strong>Friend Requests:</strong>
+            {% if friend_requests %}
+                <ul>
+                    {% for request in friend_requests %}
+                        <li id="request-{{ request.username }}">{{ request.username|escape}}
+                            <button onclick="acceptRequest('{{ request.username|escape }}')">Accept</button>
+                            <button onclick="rejectRequest('{{ request.username|escape }}')">Reject</button>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No friend requests.</p>
+            {% endif %}
+        </li>
+        <li><strong>Friends List:</strong>
+            <ul id="friends_list">
+                {% for friend in friends_list %}
+                    <li id="friend-{{ friend.username }}">
+                        {{ friend.username|escape }} - {{ friend.role|escape }} - 
+                        {% if friend.online_status %}Online{% else %}Offline{% endif %}
+                        <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
+                    </li>
+                {% endfor %}
+            </ul>
+            {% if not friends_list %}
+                <p id="no_friends_msg">No friends yet.</p>
+            {% endif %}
+        </li>
+    </ul>
+</nav>
+
+<h1>Messaging App</h1>
+
+<main>
+    <!-- The messages are displayed here -->
+    <section id="message_box"></section>
+
+    <!-- Chat box for choosing a chat partner -->
+    <section id="chat_box">
+        <p class="text">Chat with:</p>
+        <input id="receiver" placeholder="username">
+        <button onclick="join_room()">Chat</button>
+    </section>
+
+    <!-- The input box for sending messages, initially hidden -->
+    <section id="input_box" style="display: none">
+        <p class="text">Message:</p>
+        <input id="message" placeholder="message">
+        <button onclick="send()">Send</button>
+        <button onclick="leave()">Leave Room</button>
+    </section>
+
+    <!-- Friend request box for adding new friends -->
+    <section id="friend_request_box">
+        <p class="text">Add Friend:</p>
+        <input id="friend_username" placeholder="Enter friend's username">
+        <button onclick="send_friend_request()">Send Friend Request</button>
+    </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
+<script src="/static/js/libs/socket.io.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="/static/js/libs/js.cookie.min.js"></script>
+<script>
+    let privateKey;
+    async function initialize() {
+        let username = "{{ username|escape}}";
+        try {
+            privateKey = await getPrivateKey(username);
+            sessionStorage.setItem('loggedIn', 'true'); 
+        } catch (error) {
+            console.error('Failed to get private key:', error);
+            return;
+        }
+    }
+
+    $("#message").on("keyup", (e) => {
+        if (e.key == "Enter") {
+            send();
+        }
+    });
+
+    $("#receiver").on("keyup", (e) => {
+        if (e.key == "Enter") {
+            join_room();
+        }
+    });
+
+    $(document).ready(() => {
+        initialize();
+        socket.emit("disconnect");
+        if (Cookies.get("room_id") == undefined) {
+            return;
+        }
+        $("#chat_box").hide();
+        $("#input_box").show();
+        room_id = parseInt(Cookies.get("room_id"));
+    });
+
+    let username = "{{ username|escape}}";
+    Cookies.set('username', username);
+    
+    const socket = io();
+    let roomUsers = {};
+    let publicKeys = {};
+
+    socket.on("incoming", (msg, color="black") => {
+        add_message(msg, color);
+    });
+
+    socket.on('update_room_users', (users) => {
+        roomUsers = users;
+        console.log("Updated room users:", roomUsers);
+        $("#message_box").empty();
+        for (let user of roomUsers) {
+            if (user != username)
+                loadAndDisplayMessages(username, user);
+        }
+    });
+
+    socket.on("incoming_message", async (data, color = "black") => {
+        const parts = data.split(": ");
+        if (parts.length < 3) {
+            console.error("Received malformed message.");
+            return;
+        }
+
+        const sender = parts[0];
+        const encryptedMsg = parts[1];
+        const signature = parts[2];
+        decryptedMessage = await decryptMessage(privateKey, encryptedMsg);
+
+        const hash = forge.md.sha256.create();
+        hash.update(decryptedMessage, 'utf8');
+        const messageHash = hash.digest().toHex();
+
+        const publicKey_sender = await fetchPublicKey(sender);
+        const isValidSignature = await verifySignature(publicKey_sender, messageHash, signature);
+        
+        if (!isValidSignature) {
+            console.error("Signature verification failed.");
+            return;
+        }
+
+        decryptedMessage = `${sender}: ${decryptedMessage}`;
+        add_message(decryptedMessage, color);
+    });
+
+    async function send() {
+        let message = $("#message").val();
+        $("#message").val("");
+        let local_message = `${username}: ${message}`;
+        add_message(local_message, "blue");
+        const sender = username;
+        const publicKey_sender = await fetchPublicKey(sender);
+        const encryptedMessage_sender = await encryptMessage(publicKey_sender, message);
+        for (let user of roomUsers) {
+            if (user != sender) {
+                const receiver = user;
+                const publicKey_receiver = await fetchPublicKey(receiver);
+                const encryptedMessage = await encryptMessage(publicKey_receiver, message);
+
+                const hash = forge.md.sha256.create();
+                hash.update(message, 'utf8');
+                const messageHash = hash.digest().toHex();
+                const signature = await signMessage(privateKey, messageHash);
+
+                socket.emit("send", username,user, encryptedMessage,encryptedMessage_sender,signature,room_id);
+            }
+        }
+    };
+
+    async function fetchPublicKey(receiver) {
+        try {
+            const response = await axios.get(`/api/public-keys/${receiver}`);
+            return response.data.publicKey;
+        } catch (error) {
+            console.error('Failed to fetch public key:', error);
+            return null;
+        }
+    };
+
+    async function loadAndDisplayMessages(username, chatPartner) {
+        try {
+            let sessionKey = sessionStorage.getItem('sessionKey');
+            const requestData = {
+                username: username,
+                chatPartner: chatPartner,
+                sessionKey: sessionKey
+            };
+            
+            const response = await fetch("/request_history", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (!response.ok || response.status !== 200) {
+                console.log('No existing messages or failed to load messages.');
+                return;
+            }
+
+            const messages = await response.json();
+            user_public_key = await fetchPublicKey(username);
+            chatPartner_public_key = await fetchPublicKey(chatPartner);
+            for (const message of messages) {
+                const decryptedMessage = await decryptMessage(privateKey, message.message);
+                if (username == message.username){
+                    const hash = forge.md.sha256.create();
+                    hash.update(decryptedMessage, 'utf8');
+                    const messageHash = hash.digest().toHex();
+                    const isValidSignature = await verifySignature(user_public_key, messageHash, message.signature);
+                    if (!isValidSignature) {
+                        console.error("Signature verification failed.");
+                        return;
+                    } 
+                    add_message(`${message.username}: ${decryptedMessage}`, "blue");
+                }
+                else{
+                    const hash = forge.md.sha256.create();
+                    hash.update(decryptedMessage, 'utf8');
+                    const messageHash = hash.digest().toHex();
+                    const isValidSignature = await verifySignature(chatPartner_public_key, messageHash, message.signature);
+                    if (!isValidSignature) {
+                        console.error("Signature verification failed.");
+                        return;
+                    } 
+                    add_message(`${message.username}: ${decryptedMessage}`, "black");
+                
+                }
+            }
+        } catch (error) {
+            console.error('Error loading or decrypting messages:', error);
+        }
+    };
+
+    async function join_room() {
+        let receiver = $("#receiver").val();
+        let username = "{{ username|escape }}";
+    
+        try {
+            const response = await fetch(`/api/get_mute_status/${username}`);
+            const data = await response.json();
+    
+            if (data.ismuted) {
+                alert("You are muted and cannot join the chat.");
+                return;
+            }
+    
+            $("#message_box").empty();
+            socket.emit("join", username, receiver, (res) => {
+                try{
+                    res = JSON.parse(res);
+                    room_id = res.room;
+                    roomUsers = res.users;
+                    Cookies.set("room_id", room_id);
+                    $("#chat_box").hide();
+                    $("#input_box").show();
+                }
+                catch(err){
+                    alert(res);
+                }
+            });
+        } catch (error) {
+            console.error('Error checking mute status:', error);
+            alert("An error occurred while checking your mute status.");
+        }
+    }
+    
+    function removeFriend(friendUsername) {
+        let sessionKey = sessionStorage.getItem('sessionKey');
+        $.ajax({
+            url: "/remove_friend",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ username: "{{ username|escape }}", friend_username: friendUsername, sessionKey: sessionKey }),
+            success: function(response) {
+                if (response.result === "Friend removed successfully.") {
+                    let friendItem = document.getElementById(`friend-${friendUsername}`);
+                    if (friendItem) {
+                        friendItem.parentNode.removeChild(friendItem);
+                    }
+                    alert("Friend removed successfully.");
+                } else {
+                    alert(response.result);
+                }
+            },
+            error: function() {
+                alert("Error processing request.");
+            }
+        });
+    }
+    
+    function logout() {
+        const username = "{{ username|escape }}";
+        const data = { username: username };
+        
+        fetch('/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+            if (response.ok) {
+                Cookies.remove("username");
+                Cookies.remove("room_id");
+                sessionStorage.removeItem('sessionKey');
+                window.location.href = "{{ url_for('login') }}";
+            } else {
+                alert('Logout failed');
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('Logout failed');
+        });
+    }
+
+    function leave() {
+        Cookies.remove("room_id");
+        socket.emit("leave", username, room_id);
+        $("#input_box").hide();
+        $("#chat_box").show();
+    };
+
+    function add_message(message, color) {
+        let box = document.getElementById("message_box");
+        let child = document.createElement("p");
+        child.style.color = color;
+        child.textContent = message;
+        box.appendChild(child);
+    };
+
+    async function encryptMessage(publicKeyPem, message) {
+        try{
+            const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+            const buffer = forge.util.createBuffer(message, 'utf8');
+            const encrypted = publicKey.encrypt(buffer.getBytes(), 'RSA-OAEP');
+            return forge.util.encode64(encrypted);
+        }catch(error){
+            console.log("error caused by encryptMessage");
+            throw error;
+        }
+    };
+
+    async function decryptMessage(privateKeyPem, encryptedMessageBase64) {
+        try{
+            const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+            const encrypted = forge.util.decode64(encryptedMessageBase64);
+            const decrypted = privateKey.decrypt(encrypted, 'RSA-OAEP');
+            return decrypted;
+        }catch(error){
+            console.log("error caused by decryptMessage");
+            throw error;
+        }
+    };
+
+    async function signMessage(privateKeyPem, messageHash) {
+        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+        const signature = privateKey.sign(forge.md.sha256.create().update(messageHash, 'utf8'));
+        return forge.util.encode64(signature);
+    }
+
+    async function verifySignature(publicKeyPem, messageHash, signature) {
+        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+        const signatureBytes = forge.util.decode64(signature);
+        return publicKey.verify(forge.md.sha256.create().update(messageHash, 'utf8').digest().getBytes(), signatureBytes);
+    }
+
+    function getPrivateKey(username) {
+        const privateKey = localStorage.getItem(username + "_privateKey");
+        if (privateKey) {
+            console.log("Private key retrieved successfully.");
+            return privateKey;
+        } else {
+            console.log("No private key found.");
+            return null;
+        }
+    }
+
+    function send_friend_request() {
+        let friend_username = $("#friend_username").val();
+        sessionKey = sessionStorage.getItem('sessionKey');
+        $.ajax({
+            url: "/send_request",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ sender: "{{ username|escape }}", receiver: friend_username,sessionKey: sessionKey}),
+            success: function(response) {
+                alert("Request status: " + response.result);
+            },
+            error: function() {
+                alert("Failed to send friend request.");
+            }
+        });
+    }
+
+    function acceptRequest(requestUsername) {
+        let sessionKey = sessionStorage.getItem('sessionKey');
+        $.ajax({
+            url: "/accept_friend_request",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}",sessionKey: sessionKey}),
+            success: function(response) {
+                if (response.result === "Friend added successfully.") {
+                    let friendsList = document.getElementById('friends_list');
+                    let newFriend = document.createElement('li');
+                    newFriend.textContent = requestUsername; 
+                    friendsList.appendChild(newFriend);
+                    if (friendsList.children.length === 1) {
+                        let noFriendsMsg = document.getElementById('no_friends_msg');
+                        if (noFriendsMsg) noFriendsMsg.parentNode.removeChild(noFriendsMsg);
+                    }
+                    let requestItem = document.getElementById(`request-${requestUsername}`);
+                    if (requestItem) requestItem.parentNode.removeChild(requestItem);
+                    alert("Friend request accepted.");
+                } else {
+                    alert(response.result);
+                }
+            },
+            error: function() {
+                alert("Error processing request.");
+            }
+        });
+    }
+
+    function rejectRequest(requestUsername) {
+        let sessionKey = sessionStorage.getItem('sessionKey');
+        $.ajax({
+            url: "/reject_friend_request",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}",sessionKey: sessionKey}),
+            success: function(response) {
+                if (response.result === "Friend request rejected.") {
+                    $(`#request-${requestUsername}`).remove();
+                    alert("Friend request rejected.");
+                } else {
+                    alert(response.result);
+                }
+            },
+            error: function() {
+                alert("Error processing request.");
+            }
+        });
+    }
+
+    window.addEventListener('beforeunload', function(event) {
+        if (sessionStorage.getItem('loggedIn')) {
+            const username = "{{ username|escape }}";
+            const data = new FormData();
+            data.append('username', username);
+    
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/logout', false);
+            xhr.send(data);
+            
+            sessionStorage.removeItem('loggedIn');
+        }
+    });
+</script>
+{% endblock %}

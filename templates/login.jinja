@@ -1,12 +1,71 @@
 {% extends 'base.jinja' %}
 
-{% block content %} 
-    <h1>Login</h1>
-    <p>Username</p>
-    <input id="username"/>
-    <p>Password</p>
-    <input id="password" type="password"/>
-    <button onclick="login()">Login</button>
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+
+        .login-container {
+            width: 300px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+        }
+
+        p {
+            margin: 10px 0;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 5px 0 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Login</h1>
+        <p>Your account name</p>
+        <input id="username"/>
+        <p>Pick a password (4-20 characters)</p>
+        <input id="password" type="password"/>
+        <button onclick="login()">Login</button>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
@@ -19,8 +78,8 @@
 
         // Function to handle user login
         async function login() {
-            const username = $("#username").val();
-            const password = $("#password").val();
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
 
             // Check if the password is at least 4 characters long
             if (password.length < 4) {
@@ -83,4 +142,6 @@
             localStorage.setItem(username + "_privateKey", privateKeyPem);
         }
     </script>
+</body>
+</html>
 {% endblock %}
