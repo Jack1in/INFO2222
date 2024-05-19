@@ -301,7 +301,7 @@
                         articleItem.onclick = () => viewArticle(article);
                         articleItem.innerHTML = `
                             <div class="article-title">${article.title}</div>
-                            <div class="article-author">by ${authorName}</div>
+                            <div class="article-author">by ${authorName} (${article.role})</div>  <!-- Display role -->
                         `;
                         articlesList.appendChild(articleItem);
                     });
@@ -319,7 +319,6 @@
         }
         
         
-        
 
         function viewArticle(article) {
             const articleDetails = document.querySelector('.article-details');
@@ -331,7 +330,7 @@
             
             articleDetails.innerHTML = `
                 <div class="article-details-title">${article.title}</div>
-                <div class="article-details-author">by ${authorName}</div>
+                <div class="article-details-author">by ${authorName} (${article.role})</div>  <!-- Display role -->
                 <div class="article-details-content">${article.content}</div>
             `;
             
@@ -517,7 +516,7 @@
                         const commentItem = document.createElement('div');
                         commentItem.className = 'comment-container';
                         commentItem.innerHTML = `
-                            <div class="comment-author">${comment.username}:</div>
+                        <div class="comment-author">${comment.username} (${comment.role}):</div>  <!-- Display role -->
                             <pre class="comment-content">${comment.content}</pre>
                         `;
                         if (comment.username === "{{ request.args.get('username') }}" || "{{ request.args.get('role') }}" === "admin") {

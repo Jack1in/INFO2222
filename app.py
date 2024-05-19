@@ -331,8 +331,12 @@ def post_article():
         if db.is_user_muted(username):
             return jsonify({"error": "You are muted and cannot post articles"}), 403
 
+        user = db.get_user(username)
+        role = user.role if user else "unknown"
+
         article = {
             "username": username,
+            "role": role,  # Include role
             "title": title,
             "content": content,
             "anonymous": anonymous
@@ -352,7 +356,6 @@ def post_article():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    
 @app.route('/get_articles', methods=['GET'])
 def get_articles():
     try:
@@ -362,9 +365,14 @@ def get_articles():
         with open('articles.json', 'r') as file:
             articles = json.load(file)
 
+        for article in articles:
+            user = db.get_user(article['username'])
+            article['role'] = user.role if user else "unknown"
+
         return jsonify(articles), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
     
 @app.route('/update_article', methods=['PUT'])
 def update_article():
@@ -453,37 +461,29 @@ def post_comment():
         article_username = data.get('articleUsername')
         content = data.get('content')
 
-        # Validate session key
         if session.get(username) != session_key:
             return jsonify({"error": "Invalid session key"}), 403
 
-        # Check if user is muted
         if db.is_user_muted(username):
             return jsonify({"error": "You are muted and cannot post comments"}), 403
 
+        user = db.get_user(username)
+        role = user.role if user else "unknown"
+
         comment = {
             "username": username,
+            "role": role,  # Include role
             "article_title": article_title,
             "article_username": article_username,
             "content": content
         }
 
-        # Ensure comments.json exists and append the new comment
         if not os.path.exists('comments.json'):
             with open('comments.json', 'w') as file:
                 json.dump([], file)
 
         with open('comments.json', 'r+') as file:
             comments = json.load(file)
-
-            # Check for duplicate comments by the same publisher on the same article
-            for existing_comment in comments:
-                if (existing_comment['article_title'] == article_title and
-                    existing_comment['article_username'] == article_username and
-                    existing_comment['username'] == username and
-                    existing_comment['content'] == content):
-                    return jsonify({"error": "Duplicate comment"}), 400
-
             comments.append(comment)
             file.seek(0)
             json.dump(comments, file, indent=4)
@@ -508,6 +508,10 @@ def get_comments():
         with open('comments.json', 'r') as file:
             comments = json.load(file)
             article_comments = [comment for comment in comments if comment['article_title'] == title and comment['article_username'] == username]
+
+        for comment in article_comments:
+            user = db.get_user(comment['username'])
+            comment['role'] = user.role if user else "unknown"
 
         return jsonify(article_comments), 200
     except Exception as e:

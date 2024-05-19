@@ -18,5 +18,12 @@
         "article_title": "dasas",
         "article_username": "1111",
         "content": "dsa"
+    },
+    {
+        "username": "1111",
+        "role": "administrative staff",
+        "article_title": "dasdasd",
+        "article_username": "1111",
+        "content": "dasdas"
     }
 ]
