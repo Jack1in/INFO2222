@@ -137,27 +137,31 @@ def request_history():
     try:
         data = request.get_json()
         username = data.get("username")
+        print(username)
         chat_partner = data.get("chatPartner")
         sessionKey = data.get("sessionKey")
+        print(sessionKey)
+        print(session)
+        room_id = data.get("room_id")
         user = db.get_user(username)
         if user is None:
             return jsonify({"error": "User not found"}), 404
         if sessionKey != session.get(username):
             return "invalid session key", 404
-        messages = get_messages(username, chat_partner)
+        print("request_history")
+        messages = get_messages(username, chat_partner,room_id)
         return messages
     except Exception as e:
         print(e)
         return jsonify({"error": "An error occurred"}), 500
 
-def get_messages(username, chat_partner):
+def get_messages(username, chat_partner,room_id):
     directory = os.path.join(app.root_path, 'messages', username)
     filename = f'{chat_partner}.json'
     # check if the file exists
     if not os.path.exists(os.path.join(directory, filename)):
         return jsonify([])
     return send_from_directory(directory, filename)
-
 
 # home page, where the messaging app is
 @app.route("/home")
