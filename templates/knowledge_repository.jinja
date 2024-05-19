@@ -238,9 +238,9 @@
         document.getElementById('postArticleBtn').onclick = openModal;
 
         async function postArticle() {
-            const articleTitle = document.getElementById('articleTitle').value;
-            const articleContent = document.getElementById('articleContent').value;
-            const anonymous = document.getElementById('anonymousCheck').checked;
+            const articleTitle = document.getElementById("articleTitle").value;
+            const articleContent = document.getElementById("articleContent").value;
+            const anonymous = document.getElementById("anonymousCheck").checked;
             const username = "{{ request.args.get('username') }}";
             const sessionKey = "{{ request.args.get('sessionKey') }}";
         
@@ -318,29 +318,8 @@
             }
         }
         
-        function logout() {
-            const username = "{{ username|escape }}";
-            const data = { username: username };
-            
-            fetch('/logout', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            }).then(response => {
-                if (response.ok) {
-                    Cookies.remove("username");
-                    sessionStorage.removeItem('sessionKey');
-                    window.location.href = "{{ url_for('login') }}";
-                } else {
-                    alert('Logout failed');
-                }
-            }).catch(error => {
-                console.error('Error:', error);
-                alert('Logout failed');
-            });
-        }
+        
+        
 
         function viewArticle(article) {
             const articleDetails = document.querySelector('.article-details');
@@ -609,5 +588,28 @@
 
         loadArticles();
     });
+    function logout() {
+        const username = "{{ username|escape }}";
+        const data = { username: username };
+    
+        fetch('/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+            if (response.ok) {
+                Cookies.remove("username");
+                Cookies.remove("sessionKey");  // Ensure sessionKey is removed
+                window.location.href = "{{ url_for('login') }}";
+            } else {
+                alert('Logout failed');
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('Logout failed');
+        });
+    }
 </script>
 {% endblock %}
