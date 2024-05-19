@@ -2,95 +2,171 @@
 
 {% block content %}
 <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+
     nav {
         border-bottom: 1px solid black;
         overflow: auto;
+        padding: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
-    #message_box {
+    .tabs {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 1px;
+    }
+
+    .tabs button {
+        padding: 15px 30px;
+        font-size: 18px;
+        background-color: #4c8bf5;
+        color: white;
+        border: none;
+        border-radius: 0;
+        cursor: pointer;
+        flex: 1;
+    }
+
+    .tabs button.active {
+        background-color: #a2bff0;
+    }
+
+    .main-content {
+        display: flex;
+        height: calc(100vh - 150px); /* Adjust height as needed */
+    }
+
+    .friends-list {
+        width: 20%;
+        border-right: 1px solid black;
+        padding: 10px;
+        box-sizing: border-box;
+        overflow-y: auto;
+    }
+
+    .chat-section {
+        width: 80%;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    .chat-section #message_box {
         border: 1px solid black;
         height: 400px;
-        width: 800px;
-        overflow: auto;
-        padding: 2px;
+        overflow-y: auto;
+        padding: 10px;
     }
 
-    .text {
+    .chat-section #input_box {
+        margin-top: 10px;
+    }
+
+    .chat-section .text {
         margin-top: 2px;
         margin-bottom: 2px;
+    }
+
+    ol {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    ol li {
+        margin-right: 10px;
+    }
+
+    .button-group button {
+        margin-left: 10px;
     }
 </style>
 
 <nav>
     <button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Back to Home page</button>
+    <ol>
+        <li>Username: {{ username|escape }}</li>
+        <li><button onclick="logout()">Logout</button></li>
+    </ol>
 </nav>
 
-<!-- Navbar, displaying the username and friend functionalities -->
-<nav>
-    <ol style="float: right">
-        <li style="display:inline-block">Username: {{ username|escape }}</li>
-        <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
-    </ol>
-    <ul style="float: left">
-        <li><strong>Friend Requests:</strong>
-            {% if friend_requests %}
-                <ul>
-                    {% for request in friend_requests %}
-                        <li id="request-{{ request.username }}">{{ request.username|escape}}
-                            <button onclick="acceptRequest('{{ request.username|escape }}')">Accept</button>
-                            <button onclick="rejectRequest('{{ request.username|escape }}')">Reject</button>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No friend requests.</p>
-            {% endif %}
-        </li>
-        <li><strong>Friends List:</strong>
-            <ul id="friends_list">
-                {% for friend in friends_list %}
-                    <li id="friend-{{ friend.username }}">
-                        {{ friend.username|escape }} - {{ friend.role|escape }} - 
-                        {% if friend.online_status %}Online{% else %}Offline{% endif %}
-                        <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
+<div class="tabs">
+    <button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Home</button>
+    <button class="active">Chat With Friends</button>
+    <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey) }}'">Public Posts</button>
+    <button onclick="window.location.href='{{ url_for('security', username=username, sessionKey=sessionKey) }}'">Security</button>
+    <button onclick="showGuide()">Guide</button>
+</div>
+
+<div class="main-content">
+    <!-- Friends list section -->
+    <div class="friends-list">
+        <strong>Friend Requests:</strong>
+        {% if friend_requests %}
+            <ul>
+                {% for request in friend_requests %}
+                    <li id="request-{{ request.username }}">{{ request.username|escape}}
+                        <button onclick="acceptRequest('{{ request.username|escape }}')">Accept</button>
+                        <button onclick="rejectRequest('{{ request.username|escape }}')">Reject</button>
                     </li>
                 {% endfor %}
             </ul>
-            {% if not friends_list %}
-                <p id="no_friends_msg">No friends yet.</p>
-            {% endif %}
-        </li>
-    </ul>
-</nav>
+        {% else %}
+            <p>No friend requests.</p>
+        {% endif %}
+        
+        <strong>Friends List:</strong>
+        <ul id="friends_list">
+            {% for friend in friends_list %}
+                <li id="friend-{{ friend.username }}">
+                    {{ friend.username|escape }} - {{ friend.role|escape }} - 
+                    {% if friend.online_status %}Online{% else %}Offline{% endif %}
+                    <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
+                </li>
+            {% endfor %}
+        </ul>
+        {% if not friends_list %}
+            <p id="no_friends_msg">No friends yet.</p>
+        {% endif %}
+    </div>
 
-<h1>Messaging App</h1>
+    <!-- Chat section -->
+    <div class="chat-section">
+        <h1>Messaging App</h1>
+        <section id="message_box"></section>
 
-<main>
-    <!-- The messages are displayed here -->
-    <section id="message_box"></section>
+        <!-- Chat box for choosing a chat partner -->
+        <section id="chat_box">
+            <p class="text">Chat with:</p>
+            <input id="receiver" placeholder="username">
+            <button onclick="join_room()">Chat</button>
+        </section>
 
-    <!-- Chat box for choosing a chat partner -->
-    <section id="chat_box">
-        <p class="text">Chat with:</p>
-        <input id="receiver" placeholder="username">
-        <button onclick="join_room()">Chat</button>
-    </section>
+        <!-- The input box for sending messages, initially hidden -->
+        <section id="input_box" style="display: none">
+            <p class="text">Message:</p>
+            <input id="message" placeholder="message">
+            <button onclick="send()">Send</button>
+            <button onclick="leave()">Leave Room</button>
+        </section>
 
-    <!-- The input box for sending messages, initially hidden -->
-    <section id="input_box" style="display: none">
-        <p class="text">Message:</p>
-        <input id="message" placeholder="message">
-        <button onclick="send()">Send</button>
-        <button onclick="leave()">Leave Room</button>
-    </section>
-
-    <!-- Friend request box for adding new friends -->
-    <section id="friend_request_box">
-        <p class="text">Add Friend:</p>
-        <input id="friend_username" placeholder="Enter friend's username">
-        <button onclick="send_friend_request()">Send Friend Request</button>
-    </section>
-</main>
+        <!-- Friend request box for adding new friends -->
+        <section id="friend_request_box">
+            <p class="text">Add Friend:</p>
+            <input id="friend_username" placeholder="Enter friend's username">
+            <button onclick="send_friend_request()">Send Friend Request</button>
+        </section>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
@@ -148,6 +224,7 @@
         roomUsers = users;
         console.log("Updated room users:", roomUsers);
         $("#message_box").empty();
+
         for (let user of roomUsers) {
             if (user != username)
                 loadAndDisplayMessages(username, user);
@@ -497,5 +574,8 @@
             sessionStorage.removeItem('loggedIn');
         }
     });
+    function showGuide() {
+        alert("You can chat with your friends by entering their username in the 'Chat with' box and clicking 'Chat'. You can also add new friends by entering their username in the 'Add Friend' box and clicking 'Send Friend Request', remeber refresh the page to receiv receive new friend requests.");
+    }
 </script>
 {% endblock %}

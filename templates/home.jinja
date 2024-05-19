@@ -2,9 +2,34 @@
 
 {% block content %}
 <style>
+    body {
+        font-family: Arial, sans-serif;
+    }
     nav {
         border-bottom: 1px solid black;
         overflow: auto;
+    }
+
+    .tabs {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center; 
+        gap: 1px;
+    }
+
+    .tabs button {
+        padding: 15px 30px; 
+        font-size: 18px; 
+        background-color: #4c8bf5; 
+        color: white; 
+        border: none;
+        border-radius: 0; 
+        cursor: pointer;
+        flex: 1;
+    }
+
+    .tabs button + button {
+        border-left: 1px solid white; 
     }
 
     #message_box {
@@ -22,11 +47,19 @@
 </style>
 
 <!-- Navbar, displaying the username and friend functionalities -->
+
 <nav>
     <ol style="float: right">
         <li style="display:inline-block">Username: {{ username|escape }}</li>
         <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
     </ol>
+    <div class="tabs">
+        <button style="background-color: #a2bff0;">Home</button>
+        <button onclick="window.location.href='{{ url_for('chat', username=username, sessionKey=sessionKey) }}'">Chat With Friends</button>
+        <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey) }}'">Pulic Posts</button>
+        <button onclick="window.location.href='{{ url_for('security', username=username, sessionKey=sessionKey) }}'">Security</button>
+        <button onclick="showGuide()">Guide</button>
+    </div>
     <ul style="float: left">
         <li><strong>Friend Requests:</strong>
             {% if friend_requests %}
@@ -535,7 +568,9 @@ function acceptRequest(requestUsername) {
         }
     });
 
-
+    function showGuide() {
+        alert("Guide will be shown here.");
+    }
 
 </script>
 {% endblock %}
