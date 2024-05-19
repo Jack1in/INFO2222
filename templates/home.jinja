@@ -131,6 +131,8 @@
         // room_id is undefined if the user hasn't joined a room
         // we early return in this case
         initialize();
+        // emit disconnect event if the user has joined a room
+        socket.emit("disconnect");
         if (Cookies.get("room_id") == undefined) {
             return;
         }
@@ -526,6 +528,8 @@ function acceptRequest(requestUsername) {
             sessionStorage.removeItem('loggedIn');
         }
     });
+
+
 
     
 
