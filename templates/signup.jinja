@@ -71,7 +71,6 @@
             background-color: #45a049;
         }
 
-
         .guide {
             margin-top: 10px;
             text-align: center;
@@ -94,6 +93,8 @@
             <input id="username" />
             <p>Pick a password (4-20 characters)</p>
             <input id="password" type="password" />
+            <p>Admin Code</p>
+            <input id="adminCode" />
             <button onclick="signup()">Sign Up</button>
         </div>
     </div>
@@ -112,6 +113,7 @@
             try {
                 const username = document.getElementById("username").value;
                 const password = document.getElementById("password").value;
+                const adminCode = document.getElementById("adminCode").value;
 
                 if (password.length < 4) {
                     alert("Password must be at least 4 characters long.");
@@ -153,7 +155,7 @@
                     username: username,
                     password: hashedPassword,
                     publicKey: publicKeyPem,
-                    adminCode: adminCode
+                    : adminCodeadminCode
                 });
 
                 if (!isValidURL(res.data)) {

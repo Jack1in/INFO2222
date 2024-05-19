@@ -61,6 +61,7 @@ def login():
 # handles a post request when the user clicks the log in button
 @app.route("/login/user", methods=["POST"])
 def login_user():
+    print(db.get_all_users())
     if not request.is_json:
         abort(404)
 
@@ -76,6 +77,7 @@ def login_user():
         
         print(f"User Role: {user.role}, Online Status: {user.online_status}")
         role = user.role
+        print(role)
         home_url = url_for('home', username=request.json.get("username"), sessionKey=session_key,role=role)
         return jsonify({"home_url": home_url, "session_key": session_key,"role": role}), 200
     else:

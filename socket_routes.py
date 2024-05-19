@@ -96,10 +96,6 @@ def join(sender_name, receiver_name):
     sender = db.get_user(sender_name)
     if sender is None:
         return "Unknown sender!"
-    
-    friends = db.get_friends_list(sender_name)
-    if receiver_name not in friends:
-        return "You can only chat with friends!"
 
     room_id = room.get_room_id(receiver_name)
     
@@ -115,11 +111,11 @@ def join(sender_name, receiver_name):
                 return "You can only chat with friends!"
         room.join_room(sender_name, room_id)
         join_room(room_id)
+        socketio.emit('update_room_users', list(room.get_users(room_id)), room=room_id)
         # emit to everyone in the room except the sender
         emit("incoming", (f"{sender_name} has joined the room.", "green"), to=room_id, include_self=False)
         # emit only to the sender
         emit("incoming", (f"{sender_name} has joined the room. Now talking to everyone in the room.", "green"))
-        socketio.emit('update_room_users', list(room.get_users(room_id)), room=room_id)
         return json.dumps({"room": room_id, "users": room.get_users(room_id)})
 
 
@@ -128,8 +124,8 @@ def join(sender_name, receiver_name):
     # or is simply a new user looking to chat with someone
     room_id = room.create_room(sender_name, receiver_name)
     join_room(room_id)
-    emit("incoming", (f"{sender_name} has joined the room. Now talking to everyone in the room.", "green"), to=room_id)
     socketio.emit('update_room_users', list(room.get_users(room_id)), room=room_id)
+    emit("incoming", (f"{sender_name} has joined the room. Now talking to everyone in the room.", "green"), to=room_id)
     return json.dumps({"room": room_id, "users": room.get_users(room_id)})
 
 # leave room event handler
