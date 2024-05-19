@@ -149,6 +149,8 @@ def insert_staff_account():
             print("Failed to insert user.")
     else:
         print(f"User '{username}' already exists.")
+        
+
 
 # Call the function to insert the staff account
 insert_staff_account()

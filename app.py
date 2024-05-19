@@ -302,6 +302,7 @@ def post_article():
         
         username = data.get('username')
         session_key = data.get('sessionKey')
+        title = data.get('title')
         content = data.get('content')
 
         # Validate session key
@@ -310,6 +311,7 @@ def post_article():
 
         article = {
             "username": username,
+            "title": title,
             "content": content,
         }
 
@@ -330,6 +332,21 @@ def post_article():
         print(f"Error occurred: {e}")
         # Return a 500 error and the error message
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/get_articles', methods=['GET'])
+def get_articles():
+    try:
+        if not os.path.exists('articles.json'):
+            return jsonify([])
+
+        with open('articles.json', 'r') as file:
+            articles = json.load(file)
+
+        return jsonify(articles), 200
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))

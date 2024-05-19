@@ -32,6 +32,9 @@
         <!-- Modal for posting a new article -->
         <div id="postArticleModal">
             <h3>Post a New Article</h3>
+            <p>Title:</p>
+            <input type="text" id="articleTitle" placeholder="Enter the title">
+            <p>Content:</p>
             <textarea id="articleContent" placeholder="Write your article here..."></textarea>
             <button onclick="postArticle()">Submit</button>
             <button onclick="closeModal()">Cancel</button>
@@ -41,19 +44,6 @@
         <ul id="articles_list">
             <!-- Articles will be populated here -->
         </ul>
-    </section>
-
-    <section id="comments">
-        <h2>Comments</h2>
-        <!-- List of comments -->
-        <ul id="comments_list">
-            <!-- Comments will be populated here -->
-        </ul>
-    </section>
-
-    <section id="user_management">
-        <h2>User Management</h2>
-        <!-- Controls for muting/unmuting users -->
     </section>
 </main>
 
@@ -74,12 +64,13 @@
 
         // Function to post an article
         async function postArticle() {
+            const articleTitle = document.getElementById('articleTitle').value;
             const articleContent = document.getElementById('articleContent').value;
             const username = "{{ request.args.get('username') }}";
             const sessionKey = "{{ request.args.get('sessionKey') }}";
 
-            if (!articleContent) {
-                alert("Article content cannot be empty!");
+            if (!articleTitle || !articleContent) {
+                alert("Title and content cannot be empty!");
                 return;
             }
 
@@ -92,6 +83,7 @@
                     body: JSON.stringify({
                         username: username,
                         sessionKey: sessionKey,
+                        title: articleTitle,
                         content: articleContent,
                     }),
                 });
@@ -100,9 +92,12 @@
                     const result = await response.json();
                     alert("Article posted successfully!");
                     closeModal();
-                    // Optionally, reload articles or update the UI to reflect the new article
+                    // Refresh articles list after posting a new article
+                    loadArticles();
                 } else {
-                    alert("Failed to post article.");
+                    const errorText = await response.text();
+                    console.error("Failed to post article:", errorText);
+                    alert("Failed to post article. Server response: " + errorText);
                 }
             } catch (error) {
                 console.error("Error posting article:", error);
@@ -110,8 +105,33 @@
             }
         }
 
+        // Function to load articles
+        async function loadArticles() {
+            try {
+                const response = await fetch("{{ url_for('get_articles') }}");
+                if (response.ok) {
+                    const articles = await response.json();
+                    const articlesList = document.getElementById('articles_list');
+                    articlesList.innerHTML = ''; // Clear existing articles
+
+                    articles.forEach(article => {
+                        const articleItem = document.createElement('li');
+                        articleItem.innerHTML = `<strong>${article.title}</strong> by ${article.username}<br>${article.content}`;
+                        articlesList.appendChild(articleItem);
+                    });
+                } else {
+                    console.error("Failed to load articles.");
+                }
+            } catch (error) {
+                console.error("Error loading articles:", error);
+            }
+        }
+
         window.postArticle = postArticle;
         window.closeModal = closeModal;
+
+        // Load articles on page load
+        loadArticles();
     });
 </script>
 {% endblock %}
