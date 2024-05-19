@@ -56,6 +56,9 @@
                 <p id="no_friends_msg">No friends yet.</p>
             {% endif %}
         </li>
+        <li>
+            <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey) }}'">Knowledge Repository</button>
+        </li>
     </ul>
 </nav>
 

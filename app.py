@@ -163,11 +163,12 @@ def get_messages(username, chat_partner):
 @app.route("/home")
 def home():
     username = request.args.get("username")
+    sessionKey = request.args.get('sessionKey')
     if request.args.get("sessionKey") != session.get(username):
         return redirect(url_for("login"))
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
-    return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list)
+    return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list,sessionKey=sessionKey)
 
 @app.route("/send_request", methods=["POST"])
 def send_request():
@@ -277,6 +278,55 @@ def logout():
     print(f"User Role: {user.role}, Online Status: {user.online_status}")
     return "logged out"
 
+@app.route('/knowledge_repository')
+def knowledge_repository():
+    username = request.args.get('username')
+    sessionKey = request.args.get('sessionKey')
+    print(f"Knowledge Repository - Username: {username}, Session Key: {sessionKey}")
+    return render_template('knowledge_repository.jinja', username=username, sessionKey=sessionKey)
+
+@app.route('/post_article', methods=['POST'])
+def post_article():
+    try:
+        if not request.is_json:
+            print("Request does not contain JSON")
+            return jsonify({"error": "Request does not contain JSON"}), 400
+        
+        data = request.get_json()
+        
+        print("Received data:", data)
+        
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        content = data.get('content')
+
+        # Validate session key
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        article = {
+            "username": username,
+            "content": content,
+        }
+
+        # Ensure articles.json exists and append the new article
+        if not os.path.exists('articles.json'):
+            with open('articles.json', 'w') as file:
+                json.dump([], file)
+
+        with open('articles.json', 'r+') as file:
+            articles = json.load(file)
+            articles.append(article)
+            file.seek(0)
+            json.dump(articles, file, indent=4)
+
+        return jsonify({"message": "Article posted successfully"}), 200
+    except Exception as e:
+        # Print error message to the console
+        print(f"Error occurred: {e}")
+        # Return a 500 error and the error message
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
+    
