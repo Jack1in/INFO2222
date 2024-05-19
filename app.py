@@ -422,6 +422,118 @@ def delete_article():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/post_comment', methods=['POST'])
+def post_comment():
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request does not contain JSON"}), 400
+        
+        data = request.get_json()
+        
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        article_title = data.get('articleTitle')
+        article_username = data.get('articleUsername')
+        content = data.get('content')
+        comment_publisher = data.get('commentPublisher')
+
+        # Validate session key
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        comment = {
+            "username": username,
+            "article_title": article_title,
+            "article_username": article_username,
+            "content": content,
+            "comment_publisher": comment_publisher
+        }
+
+        # Ensure comments.json exists and append the new comment
+        if not os.path.exists('comments.json'):
+            with open('comments.json', 'w') as file:
+                json.dump([], file)
+
+        with open('comments.json', 'r+') as file:
+            comments = json.load(file)
+
+            # Check for duplicate comments by the same publisher on the same article
+            for existing_comment in comments:
+                if (existing_comment['article_title'] == article_title and
+                    existing_comment['article_username'] == article_username and
+                    existing_comment['username'] == username and
+                    existing_comment['content'] == content):
+                    return jsonify({"error": "Duplicate comment"}), 400
+
+            comments.append(comment)
+            file.seek(0)
+            json.dump(comments, file, indent=4)
+
+        return jsonify({"message": "Comment posted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/get_comments', methods=['POST'])
+def get_comments():
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request does not contain JSON"}), 400
+
+        data = request.get_json()
+        title = data.get('title')
+        username = data.get('username')
+
+        if not os.path.exists('comments.json'):
+            return jsonify([])
+
+        with open('comments.json', 'r') as file:
+            comments = json.load(file)
+            article_comments = [comment for comment in comments if comment['article_title'] == title and comment['article_username'] == username]
+
+        return jsonify(article_comments), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/delete_comment', methods=['DELETE'])
+def delete_comment():
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request does not contain JSON"}), 400
+
+        data = request.get_json()
+        
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        article_title = data.get('articleTitle')
+        article_username = data.get('articleUsername')
+        comment_publisher = data.get('commentPublisher')
+        content = data.get('content')
+
+        # Validate session key
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        if not os.path.exists('comments.json'):
+            return jsonify({"error": "Comment not found"}), 404
+
+        with open('comments.json', 'r+') as file:
+            comments = json.load(file)
+            comments = [comment for comment in comments if not (
+                comment['article_title'] == article_title and
+                comment['article_username'] == article_username and
+                comment['username'] == comment_publisher and
+                comment['content'] == content
+            )]
+
+            file.seek(0)
+            json.dump(comments, file, indent=4)
+            file.truncate()
+
+        return jsonify({"message": "Comment deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
     
