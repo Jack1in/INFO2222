@@ -253,6 +253,11 @@
                     const articlesList = document.getElementById('articles_list');
                     articlesList.innerHTML = '';
 
+                    if (articles.length === 0) {
+                        articlesList.innerHTML = '<p>No articles available.</p>';
+                        return;
+                    }
+
                     articles.forEach(article => {
                         const articleItem = document.createElement('div');
                         articleItem.className = 'article-container';
@@ -263,6 +268,9 @@
                         `;
                         articlesList.appendChild(articleItem);
                     });
+
+                    // Automatically view the first article if articles exist
+                    viewArticle(articles[0]);
                 } else {
                     console.error("Failed to load articles.");
                 }
