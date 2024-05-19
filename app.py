@@ -41,8 +41,9 @@ app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 '''
-
-
+with open('config.json', 'r') as json_file:
+    config = json.load(json_file)
+    app.config['ADMIN_CODE_HASH'] = config['admin_code_hash']
 socketio = SocketIO(app)
 
 
@@ -73,9 +74,12 @@ def login_user():
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
         session_key = secrets.token_hex()
         session[username] = session_key
-        print(session)
-        home_url = url_for('home', username=request.json.get("username"),sessionKey=session_key)
-        return jsonify({"home_url": home_url, "session_key": session_key}), 200
+        db.set_online_status(username, True)
+        
+        print(f"User Role: {user.role}, Online Status: {user.online_status}")
+        role = user.role
+        home_url = url_for('home', username=request.json.get("username"), sessionKey=session_key,role=role)
+        return jsonify({"home_url": home_url, "session_key": session_key,"role": role}), 200
     else:
         return "Error: Password does not match!"
     
@@ -94,10 +98,21 @@ def signup_user():
     username = request.json.get("username")
     password = request.json.get("password")
     publicKey = request.json.get("publicKey")
+    adminCode = request.json.get("adminCode")
     
+    # Check if the user already exists
     if db.get_user(username) is None:
+        # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        db.insert_user(username, hashed_password,publicKey)
+        
+        # Determine role based on admin code
+        if adminCode and bcrypt.checkpw(adminCode.encode('utf-8'), app.config['ADMIN_CODE_HASH'].encode('utf-8')):
+            role = 'admin'
+        else:
+            role = 'user'
+        
+        # Insert the user with the determined role
+        db.insert_user(username, hashed_password, publicKey, role)
         return url_for('login')
     return "Error: User already exists!"
 
@@ -157,14 +172,13 @@ def get_messages(username, chat_partner,room_id):
 @app.route("/home")
 def home():
     username = request.args.get("username")
-    print(username)
-    print(request.args.get("sessionKey"))
-    print(session)
+    sessionKey = request.args.get('sessionKey')
+    role = request.args.get('role')
     if request.args.get("sessionKey") != session.get(username):
         return redirect(url_for("login"))
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
-    return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list)
+    return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list, sessionKey=sessionKey, role=role)
 
 @app.route("/send_request", methods=["POST"])
 def send_request():
@@ -178,7 +192,6 @@ def send_request():
     if sender == receiver:
         return jsonify({"result": "You can't send a friend request to yourself!"})
     result = db.send_friend_request(sender, receiver)
-    print(result)
     return jsonify({"result": result})
 
 
@@ -192,7 +205,6 @@ def accept_friend_request():
     sessionKey = request.json.get("sessionKey")
     if sessionKey != session.get(receiver):
         return jsonify("invalid session key")
-    print("accept_friend_request")
     result = db.accept_friend_request(sender, receiver)
     return jsonify({"result": result})
 
@@ -209,6 +221,17 @@ def reject_friend_request():
     result = db.reject_friend_request(sender, receiver)
     return jsonify({"result": result})
 
+@app.route("/remove_friend", methods=["POST"])
+def remove_friend():
+    if not request.is_json:
+        abort(400)
+    username = request.json.get("username")
+    friend_username = request.json.get("friend_username")
+    sessionKey = request.json.get("sessionKey")
+    if sessionKey != session.get(username):
+        return jsonify("invalid session key")
+    result = db.remove_friend(username, friend_username)
+    return jsonify({"result": result})
 
 # test models
 @app.route('/test')
@@ -259,9 +282,330 @@ def logout():
     if not request.is_json:
         abort(400)
     username = request.json.get("username")
+    user =  db.get_user(username)
     session.pop(username)
+    db.set_online_status(username, False)
+    print(f"User Role: {user.role}, Online Status: {user.online_status}")
     return "logged out"
 
+@app.route('/knowledge_repository')
+def knowledge_repository():
+    username = request.args.get('username')
+    sessionKey = request.args.get('sessionKey')
+    role = request.args.get('role')
+    if session.get(username) != sessionKey:
+        return redirect(url_for("login"))
+    return render_template('knowledge_repository.jinja', username=username, sessionKey=sessionKey, role=role)
+
+@app.route('/post_article', methods=['POST'])
+def post_article():
+    try:
+        if not request.is_json:
+            print("Request does not contain JSON")
+            return jsonify({"error": "Request does not contain JSON"}), 400
+        
+        data = request.get_json()
+        
+        print("Received data:", data)
+        
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        title = data.get('title')
+        content = data.get('content')
+
+        # Validate session key
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        # Check if user is muted
+        if db.is_user_muted(username):
+            return jsonify({"error": "You are muted and cannot post articles"}), 403
+
+        article = {
+            "username": username,
+            "title": title,
+            "content": content,
+        }
+
+        # Ensure articles.json exists and append the new article
+        if not os.path.exists('articles.json'):
+            with open('articles.json', 'w') as file:
+                json.dump([], file)
+
+        with open('articles.json', 'r+') as file:
+            articles = json.load(file)
+            articles.append(article)
+            file.seek(0)
+            json.dump(articles, file, indent=4)
+
+        return jsonify({"message": "Article posted successfully"}), 200
+    except Exception as e:
+        # Print error message to the console
+        print(f"Error occurred: {e}")
+        # Return a 500 error and the error message
+        return jsonify({"error": str(e)}), 500
+
+    
+@app.route('/get_articles', methods=['GET'])
+def get_articles():
+    try:
+        if not os.path.exists('articles.json'):
+            return jsonify([])
+
+        with open('articles.json', 'r') as file:
+            articles = json.load(file)
+
+        return jsonify(articles), 200
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/update_article', methods=['PUT'])
+def update_article():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        old_title = data.get('oldTitle')
+        old_username = data.get('oldUsername')
+        title = data.get('title')
+        content = data.get('content')
+
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        if not os.path.exists('articles.json'):
+            return jsonify({"error": "Article not found"}), 404
+
+        with open('articles.json', 'r+') as file:
+            articles = json.load(file)
+            for article in articles:
+                if article['title'] == old_title and article['username'] == old_username:
+                    if username == article['username'] or db.get_user(username).role == 'admin':
+                        article['title'] = title
+                        article['content'] = content
+                        break
+                    else:
+                        return jsonify({"error": "You do not have permission to update this article"}), 403
+            else:
+                return jsonify({"error": "Article not found"}), 404
+
+            file.seek(0)
+            json.dump(articles, file, indent=4)
+            file.truncate()
+
+        return jsonify({"message": "Article updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/delete_article', methods=['DELETE'])
+def delete_article():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        title = data.get('title')
+        article_username = data.get('articleUsername')
+
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        if not os.path.exists('articles.json'):
+            return jsonify({"error": "Article not found"}), 404
+
+        with open('articles.json', 'r+') as file:
+            articles = json.load(file)
+            new_articles = []
+            for article in articles:
+                if article['title'] == title and article['username'] == article_username:
+                    if username == article['username'] or db.get_user(username).role == 'admin':
+                        continue
+                    else:
+                        return jsonify({"error": "You do not have permission to delete this article"}), 403
+                new_articles.append(article)
+
+            file.seek(0)
+            json.dump(new_articles, file, indent=4)
+            file.truncate()
+
+        return jsonify({"message": "Article deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/post_comment', methods=['POST'])
+def post_comment():
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request does not contain JSON"}), 400
+        
+        data = request.get_json()
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        article_title = data.get('articleTitle')
+        article_username = data.get('articleUsername')
+        content = data.get('content')
+
+        # Validate session key
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        # Check if user is muted
+        if db.is_user_muted(username):
+            return jsonify({"error": "You are muted and cannot post comments"}), 403
+
+        comment = {
+            "username": username,
+            "article_title": article_title,
+            "article_username": article_username,
+            "content": content
+        }
+
+        # Ensure comments.json exists and append the new comment
+        if not os.path.exists('comments.json'):
+            with open('comments.json', 'w') as file:
+                json.dump([], file)
+
+        with open('comments.json', 'r+') as file:
+            comments = json.load(file)
+
+            # Check for duplicate comments by the same publisher on the same article
+            for existing_comment in comments:
+                if (existing_comment['article_title'] == article_title and
+                    existing_comment['article_username'] == article_username and
+                    existing_comment['username'] == username and
+                    existing_comment['content'] == content):
+                    return jsonify({"error": "Duplicate comment"}), 400
+
+            comments.append(comment)
+            file.seek(0)
+            json.dump(comments, file, indent=4)
+
+        return jsonify({"message": "Comment posted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/get_comments', methods=['POST'])
+def get_comments():
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request does not contain JSON"}), 400
+
+        data = request.get_json()
+        title = data.get('title')
+        username = data.get('username')
+
+        if not os.path.exists('comments.json'):
+            return jsonify([])
+
+        with open('comments.json', 'r') as file:
+            comments = json.load(file)
+            article_comments = [comment for comment in comments if comment['article_title'] == title and comment['article_username'] == username]
+
+        return jsonify(article_comments), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/delete_comment', methods=['DELETE'])
+def delete_comment():
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request does not contain JSON"}), 400
+
+        data = request.get_json()
+        
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        article_title = data.get('articleTitle')
+        article_username = data.get('articleUsername')
+        comment_publisher = data.get('commentPublisher')
+        content = data.get('content')
+
+        # Validate session key
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        if not os.path.exists('comments.json'):
+            return jsonify({"error": "Comment not found"}), 404
+
+        with open('comments.json', 'r+') as file:
+            comments = json.load(file)
+            comments = [comment for comment in comments if not (
+                comment['article_title'] == article_title and
+                comment['article_username'] == article_username and
+                comment['username'] == comment_publisher and
+                comment['content'] == content
+            )]
+
+            file.seek(0)
+            json.dump(comments, file, indent=4)
+            file.truncate()
+
+        return jsonify({"message": "Comment deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/mute_user', methods=['POST'])
+def mute_user():
+    if not request.is_json:
+        return jsonify({"error": "Request does not contain JSON"}), 400
+
+    data = request.get_json()
+    username = data.get('username')
+    session_key = data.get('sessionKey')
+    target_user = data.get('targetUser')
+
+    print(f"Muting user: {target_user}")
+
+    if session.get(username) != session_key:
+        return jsonify({"error": "Invalid session key"}), 403
+
+    user = db.get_user(username)
+    if user.role != 'admin':
+        return jsonify({"error": "Permission denied"}), 403
+
+    result = db.mute_user(target_user)
+    return jsonify({"message": result})
+
+@app.route('/unmute_user', methods=['POST'])
+def unmute_user():
+    if not request.is_json:
+        return jsonify({"error": "Request does not contain JSON"}), 400
+
+    data = request.get_json()
+    username = data.get('username')
+    session_key = data.get('sessionKey')
+    target_user = data.get('targetUser')
+
+    print(f"Unmuting user: {target_user}")
+
+    if session.get(username) != session_key:
+        return jsonify({"error": "Invalid session key"}), 403
+
+    user = db.get_user(username)
+    if user.role != 'admin':
+        return jsonify({"error": "Permission denied"}), 403
+
+    result = db.unmute_user(target_user)
+    return jsonify({"message": result})
+
+@app.route('/user_management')
+def user_management():
+    username = request.args.get('username')
+    sessionKey = request.args.get('sessionKey')
+    role = request.args.get('role')
+    if session.get(username) != sessionKey:
+        return redirect(url_for("login"))
+    if role != 'admin':
+        return redirect(url_for("home", username=username, sessionKey=sessionKey, role=role))
+    users = db.get_all_users()  # You'll need to implement this function in db.py
+    return render_template('user_management.jinja', username=username, sessionKey=sessionKey, role=role, users=users)
+
+@app.route('/api/get_mute_status/<username>', methods=['GET'])
+def get_mute_status(username):
+    user = db.get_user(username)
+    if user:
+        return jsonify({"ismuted": user.ismuted}), 200
+    return jsonify({"error": "User not found"}), 404
 
 if __name__ == '__main__':
     socketio.run(app)
