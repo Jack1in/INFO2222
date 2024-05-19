@@ -27,6 +27,10 @@ app = Flask(__name__)
 cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
 cert_path = os.path.join(cert_dir, 'localhost.crt')
 key_path = os.path.join(cert_dir, 'localhost.key')
+app.config['SECRET_KEY'] = 'nice_secret_ley'
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
+'''''
 app.config['SSL_CERT_PATH'] = cert_path
 app.config['SSL_KEY_PATH'] = key_path
 # secret key used to sign the session cookie
@@ -37,6 +41,7 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
+'''
 
 
 with open('config.json', 'r') as json_file:
@@ -157,6 +162,26 @@ def request_history():
         return messages
     except Exception as e:
         print(e)
+        return jsonify({"error": "An error occurred"}), 500
+    
+@app.route("/reset_password", methods=["POST"])
+def reset_password():
+    try:
+        data = request.get_json()
+        username = data.get("username")
+        new_password = data.get("new_password")
+        sessionKey = data.get("sessionKey")
+        publicKey = data.get("publicKey")
+        user = db.get_user(username)
+        print(username, new_password, sessionKey, publicKey)
+        if user is None:
+            return jsonify({"error": "User not found"}), 404
+        if sessionKey != session.get(username):
+            return "invalid session key", 404
+        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        db.update_password(username, hashed_password,publicKey)
+        return jsonify({"message": "Password reset successfully"}), 200
+    except Exception as e:
         return jsonify({"error": "An error occurred"}), 500
 
 def get_messages(username, chat_partner,room_id):
@@ -295,6 +320,15 @@ def knowledge_repository():
     if session.get(username) != sessionKey:
         return redirect(url_for("login"))
     return render_template('knowledge_repository.jinja', username=username, sessionKey=sessionKey, role=role)
+
+@app.route('/security')
+def security():
+    username = request.args.get('username')
+    sessionKey = request.args.get('sessionKey')
+    role = request.args.get('role')
+    if session.get(username) != sessionKey:
+        return redirect(url_for("login"))
+    return render_template('security.jinja', username=username, sessionKey=sessionKey, role=role)
 
 
 # route for chat room
@@ -614,5 +648,5 @@ def get_mute_status(username):
     return jsonify({"error": "User not found"}), 404
 
 if __name__ == '__main__':
-    socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
+    socketio.run(app)
     
