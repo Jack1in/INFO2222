@@ -44,19 +44,12 @@ def disconnect():
     room.leave_room(username)
 
 @socketio.on("send")
-def send(username, message,encryptedMessage_sender,signature,room_id):
-    users = room.get_users(room_id)
-    if username == users[0]:
-        sender = users[0]
-        receiver = users[1]
-    else:
-        sender = users[1]
-        receiver = users[0]
+def send(sender, receiver, message,encryptedMessage_sender,signature,room_id):
     # send the message
-    emit("incoming_message", (f"{username}: {message}: {signature}"),to=room_id, include_self=False)
+    emit("incoming_message", (f"{sender}: {message}: {signature}"),to=room_id, include_self=False)
     
     # save file 
-    file_path_sender = f"messages/{username}/{receiver}.json"
+    file_path_sender = f"messages/{sender}/{receiver}.json"
     file_path_receiver = f"messages/{receiver}/{sender}.json"
     
     # create the directory if it doesn't exist
@@ -76,8 +69,8 @@ def send(username, message,encryptedMessage_sender,signature,room_id):
         data_receiver = []
 
     # append the new message
-    data_sender.append({"username": username, "message": encryptedMessage_sender,"signature": signature,"timestamp": str(datetime.datetime.now())})
-    data_receiver.append({"username": username, "message": message,"signature": signature, "timestamp": str(datetime.datetime.now())})
+    data_sender.append({"username": sender, "message": encryptedMessage_sender,"signature": signature,"timestamp": str(datetime.datetime.now())})
+    data_receiver.append({"username": sender, "message": message,"signature": signature, "timestamp": str(datetime.datetime.now())})
 
     # save the messages
     with open(file_path_sender, "w") as file:
@@ -100,36 +93,34 @@ def join(sender_name, receiver_name):
     sender = db.get_user(sender_name)
     if sender is None:
         return "Unknown sender!"
-    
-    friends = db.get_friends_list(sender_name)
-    if receiver_name not in friends:
-        return "You can only chat with friends!"
 
     room_id = room.get_room_id(receiver_name)
 
     # if the user is already inside of a room 
     if room_id is not None:
-        # if the receiver is room with another user
-        if room.get_users!=None and room.get_users(room_id)[0] != sender_name and room.get_users(room_id)[0] != receiver_name:
-            return "User is already in a chat with someone else."
-        if (room.get_users(room_id).__sizeof__()>1):
-            if room.get_users(room_id)[1] != sender_name and room.get_users(room_id)[1] != receiver_name:
-                return "User is already in a chat with someone else."
+        # check if the user is friend for all the users in the chat room
+        for user in room.get_users(room_id):
+            if sender_name not in db.get_friends_list(user) and user != sender_name:
+                return "You can only chat with friends!"
+        
         room.join_room(sender_name, room_id)
         join_room(room_id)
         # emit to everyone in the room except the sender
         emit("incoming", (f"{sender_name} has joined the room.", "green"), to=room_id, include_self=False)
         # emit only to the sender
-        emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"))
-        return room_id
+        emit("incoming", (f"{sender_name} has joined the room. Now talking to everyone in the room.", "green"))
+        socketio.emit('update_room_users', list(room.get_users(room_id)), room=room_id)
+        return json.dumps({"room": room_id, "users": room.get_users(room_id)})
+
 
     # if the user isn't inside of any room, 
     # perhaps this user has recently left a room
     # or is simply a new user looking to chat with someone
     room_id = room.create_room(sender_name, receiver_name)
     join_room(room_id)
-    emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"), to=room_id)
-    return room_id
+    emit("incoming", (f"{sender_name} has joined the room. Now talking to everyone in the room.", "green"), to=room_id)
+    socketio.emit('update_room_users', list(room.get_users(room_id)), room=room_id)
+    return json.dumps({"room": room_id, "users": room.get_users(room_id)})
 
 # leave room event handler
 @socketio.on("leave")

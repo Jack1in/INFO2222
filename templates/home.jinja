@@ -128,10 +128,21 @@
     Cookies.set('username', username);
     
     const socket = io();
+    let roomUsers = {};
+    let publicKeys = {};
 
     // normal incoming message event
     socket.on("incoming", (msg, color="black") => {
         add_message(msg, color);
+    });
+
+    socket.on('update_room_users', (users) => {
+        roomUsers = users;
+        console.log("Updated room users:", roomUsers);
+        for (let user of roomUsers) {
+            if (user != username)
+                loadAndDisplayMessages(username, user);
+        }
     });
 
     // normal incoming message event
@@ -175,21 +186,24 @@
         let local_message = `${username}: ${message}`;
         add_message(local_message, "blue");
         const sender = username;
-        const receiver = $("#receiver").val();
-
-        // Encryption of the message
-        const publicKey_receiver = await fetchPublicKey(receiver);  // Fetch the receiver's public key from server
         const publicKey_sender = await fetchPublicKey(sender);  // Fetch the sender's public key from server
-        const encryptedMessage = await encryptMessage(publicKey_receiver, message);
         const encryptedMessage_sender = await encryptMessage(publicKey_sender, message);
+        for (let user of roomUsers) {
+            if (user != sender) {
+                const receiver = user;
+                // Encryption of the message
+                const publicKey_receiver = await fetchPublicKey(receiver);  // Fetch the receiver's public key from server
+                const encryptedMessage = await encryptMessage(publicKey_receiver, message);
 
-        // Signature of the message
-        const hash = forge.md.sha256.create();
-        hash.update(message, 'utf8');
-        const messageHash = hash.digest().toHex();
-        const signature = await signMessage(privateKey, messageHash);
+                // Signature of the message
+                const hash = forge.md.sha256.create();
+                hash.update(message, 'utf8');
+                const messageHash = hash.digest().toHex();
+                const signature = await signMessage(privateKey, messageHash);
 
-        socket.emit("send", username, encryptedMessage,encryptedMessage_sender,signature,room_id);
+                socket.emit("send", username,user, encryptedMessage,encryptedMessage_sender,signature,room_id);
+            }
+        }
     };
 
     // Function to fetch public key from server
@@ -206,18 +220,13 @@
     async function loadAndDisplayMessages(username, chatPartner) {
         try {
             // load password from local storage
-            const password = localStorage.getItem(username + "_password");
-            console.log(username + "_password")
-            // Hash the password
-            console.log("password in load: ", password);
-            const hashedPassword = CryptoJS.SHA256(password).toString();
-            console.log("hashedPassword in load: ", hashedPassword);
+            let sessionKey = sessionStorage.getItem('sessionKey');
             const requestData = {
                 username: username,
                 chatPartner: chatPartner,
-                hashedPassword: hashedPassword
+                sessionKey: sessionKey
             };
-
+            
             const response = await fetch("/request_history", {
                 method: "POST",
                 headers: {
@@ -273,15 +282,12 @@
         // remove everything in chat box
         $("#message_box").empty();
         socket.emit("join", username, receiver, (res) => {
-            if (typeof res != "number") {
-                alert(res);
-                return;
-            }
-            room_id = res;
+            res = JSON.parse(res);
+            room_id = res.room;
+            roomUsers = res.users;
             Cookies.set("room_id", room_id);
             $("#chat_box").hide();
             $("#input_box").show();
-            loadAndDisplayMessages(username, receiver);
         });
     };
 
@@ -354,11 +360,12 @@
     
 function send_friend_request() {
     let friend_username = $("#friend_username").val();
+    sessionKey = sessionStorage.getItem('sessionKey');
     $.ajax({
         url: "/send_request",
         type: "POST",
         contentType: "application/json",
-        data: JSON.stringify({ sender: "{{ username|escape }}", receiver: friend_username }),
+        data: JSON.stringify({ sender: "{{ username|escape }}", receiver: friend_username,sessionKey: sessionKey}),
         success: function(response) {
             alert("Request status: " + response.result);
         },
@@ -369,11 +376,12 @@ function send_friend_request() {
 }
 
 function acceptRequest(requestUsername) {
+    let sessionKey = sessionStorage.getItem('sessionKey');
     $.ajax({
         url: "/accept_friend_request",
         type: "POST",
         contentType: "application/json",
-        data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}"}),
+        data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}",sessionKey: sessionKey}),
         success: function(response) {
             if (response.result === "Friend added successfully.") {
                 let friendsList = document.getElementById('friends_list');
@@ -398,11 +406,12 @@ function acceptRequest(requestUsername) {
 }
 
     function rejectRequest(requestUsername) {
+        let sessionKey = sessionStorage.getItem('sessionKey');
         $.ajax({
             url: "/reject_friend_request",
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}"}),
+            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}",sessionKey: sessionKey}),
             success: function(response) {
                 if (response.result === "Friend request rejected.") {
                     $(`#request-${requestUsername}`).remove();
@@ -416,6 +425,12 @@ function acceptRequest(requestUsername) {
             }
         });
     }
+
+window.onbeforeunload = function() {
+    const username = "{{ username|escape }}";
+    const data = JSON.stringify({username: username});
+    navigator.sendBeacon('/logout', data);
+};
 
 </script>
 {% endblock %}
