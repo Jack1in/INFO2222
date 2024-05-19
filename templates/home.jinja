@@ -57,8 +57,7 @@
             {% endif %}
         </li>
         <li>
-            <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey) }}'">Knowledge Repository</button>
-        </li>
+            <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey, role=role) }}'">Knowledge Repository</button>
     </ul>
 </nav>
 

@@ -73,9 +73,9 @@ def login_user():
         db.set_online_status(username, True)
         
         print(f"User Role: {user.role}, Online Status: {user.online_status}")
-        
-        home_url = url_for('home', username=request.json.get("username"), sessionKey=session_key)
-        return jsonify({"home_url": home_url, "session_key": session_key}), 200
+        role = user.role
+        home_url = url_for('home', username=request.json.get("username"), sessionKey=session_key,role=role)
+        return jsonify({"home_url": home_url, "session_key": session_key,"role": role}), 200
     else:
         return "Error: Password does not match!"
     
@@ -168,11 +168,12 @@ def get_messages(username, chat_partner,room_id):
 def home():
     username = request.args.get("username")
     sessionKey = request.args.get('sessionKey')
+    role = request.args.get('role')
     if request.args.get("sessionKey") != session.get(username):
         return redirect(url_for("login"))
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
-    return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list,sessionKey=sessionKey)
+    return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list, sessionKey=sessionKey, role=role)
 
 @app.route("/send_request", methods=["POST"])
 def send_request():
@@ -286,8 +287,10 @@ def logout():
 def knowledge_repository():
     username = request.args.get('username')
     sessionKey = request.args.get('sessionKey')
-    print(f"Knowledge Repository - Username: {username}, Session Key: {sessionKey}")
-    return render_template('knowledge_repository.jinja', username=username, sessionKey=sessionKey)
+    role = request.args.get('role')
+    if session.get(username) != sessionKey:
+        return redirect(url_for("login"))
+    return render_template('knowledge_repository.jinja', username=username, sessionKey=sessionKey, role=role)
 
 @app.route('/post_article', methods=['POST'])
 def post_article():
@@ -347,6 +350,77 @@ def get_articles():
         print(f"Error occurred: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/update_article', methods=['PUT'])
+def update_article():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        old_title = data.get('oldTitle')
+        old_username = data.get('oldUsername')
+        title = data.get('title')
+        content = data.get('content')
+
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        if not os.path.exists('articles.json'):
+            return jsonify({"error": "Article not found"}), 404
+
+        with open('articles.json', 'r+') as file:
+            articles = json.load(file)
+            for article in articles:
+                if article['title'] == old_title and article['username'] == old_username:
+                    if username == article['username'] or db.get_user(username).role == 'admin':
+                        article['title'] = title
+                        article['content'] = content
+                        break
+                    else:
+                        return jsonify({"error": "You do not have permission to update this article"}), 403
+            else:
+                return jsonify({"error": "Article not found"}), 404
+
+            file.seek(0)
+            json.dump(articles, file, indent=4)
+            file.truncate()
+
+        return jsonify({"message": "Article updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/delete_article', methods=['DELETE'])
+def delete_article():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        session_key = data.get('sessionKey')
+        title = data.get('title')
+        article_username = data.get('articleUsername')
+
+        if session.get(username) != session_key:
+            return jsonify({"error": "Invalid session key"}), 403
+
+        if not os.path.exists('articles.json'):
+            return jsonify({"error": "Article not found"}), 404
+
+        with open('articles.json', 'r+') as file:
+            articles = json.load(file)
+            new_articles = []
+            for article in articles:
+                if article['title'] == title and article['username'] == article_username:
+                    if username == article['username'] or db.get_user(username).role == 'admin':
+                        continue
+                    else:
+                        return jsonify({"error": "You do not have permission to delete this article"}), 403
+                new_articles.append(article)
+
+            file.seek(0)
+            json.dump(new_articles, file, indent=4)
+            file.truncate()
+
+        return jsonify({"message": "Article deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
