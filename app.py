@@ -296,23 +296,18 @@ def knowledge_repository():
 def post_article():
     try:
         if not request.is_json:
-            print("Request does not contain JSON")
             return jsonify({"error": "Request does not contain JSON"}), 400
-        
+
         data = request.get_json()
-        
-        print("Received data:", data)
-        
         username = data.get('username')
         session_key = data.get('sessionKey')
         title = data.get('title')
         content = data.get('content')
+        anonymous = data.get('anonymous', False)  # Default to False if not provided
 
-        # Validate session key
         if session.get(username) != session_key:
             return jsonify({"error": "Invalid session key"}), 403
 
-        # Check if user is muted
         if db.is_user_muted(username):
             return jsonify({"error": "You are muted and cannot post articles"}), 403
 
@@ -320,9 +315,9 @@ def post_article():
             "username": username,
             "title": title,
             "content": content,
+            "anonymous": anonymous
         }
 
-        # Ensure articles.json exists and append the new article
         if not os.path.exists('articles.json'):
             with open('articles.json', 'w') as file:
                 json.dump([], file)
@@ -335,9 +330,6 @@ def post_article():
 
         return jsonify({"message": "Article posted successfully"}), 200
     except Exception as e:
-        # Print error message to the console
-        print(f"Error occurred: {e}")
-        # Return a 500 error and the error message
         return jsonify({"error": str(e)}), 500
 
     
@@ -352,8 +344,8 @@ def get_articles():
 
         return jsonify(articles), 200
     except Exception as e:
-        print(f"Error occurred: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/update_article', methods=['PUT'])
 def update_article():
@@ -365,6 +357,7 @@ def update_article():
         old_username = data.get('oldUsername')
         title = data.get('title')
         content = data.get('content')
+        anonymous = data.get('anonymous', False)
 
         if session.get(username) != session_key:
             return jsonify({"error": "Invalid session key"}), 403
@@ -379,6 +372,7 @@ def update_article():
                     if username == article['username'] or db.get_user(username).role == 'admin':
                         article['title'] = title
                         article['content'] = content
+                        article['anonymous'] = anonymous
                         break
                     else:
                         return jsonify({"error": "You do not have permission to update this article"}), 403
@@ -392,6 +386,7 @@ def update_article():
         return jsonify({"message": "Article updated successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/delete_article', methods=['DELETE'])
 def delete_article():

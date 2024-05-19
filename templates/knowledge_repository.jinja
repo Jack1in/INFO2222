@@ -163,12 +163,18 @@
                 <input type="text" id="articleTitle" class="input-field" placeholder="Enter the title">
                 <p>Content:</p>
                 <textarea id="articleContent" class="input-field" placeholder="Write your article here..."></textarea>
+                <label>
+                    <input type="checkbox" id="anonymousCheck"> Post Anonymously
+                </label>
             </div>
             <div class="modal-footer">
                 <button onclick="postArticle()">Submit</button>
                 <button onclick="closeModal()">Cancel</button>
             </div>
         </div>
+        
+        
+        
 
         <div id="articles_list">
         </div>
@@ -228,14 +234,15 @@
         async function postArticle() {
             const articleTitle = document.getElementById('articleTitle').value;
             const articleContent = document.getElementById('articleContent').value;
+            const anonymous = document.getElementById('anonymousCheck').checked;
             const username = "{{ request.args.get('username') }}";
             const sessionKey = "{{ request.args.get('sessionKey') }}";
-
+        
             if (!articleTitle || !articleContent) {
                 alert("Title and content cannot be empty!");
                 return;
             }
-
+        
             try {
                 const response = await fetch("{{ url_for('post_article') }}", {
                     method: "POST",
@@ -247,31 +254,26 @@
                         sessionKey: sessionKey,
                         title: articleTitle,
                         content: articleContent,
+                        anonymous: anonymous,  // Ensure anonymous field is included
                     }),
                 });
-
+        
                 if (response.ok) {
-                    const result = await response.json();
-                    alert("Article updated successfully!");
-                    closeEditModal();
+                    alert("Article posted successfully!");
+                    closeModal();
                     loadArticles();
-                    viewArticle({
-                        title: articleTitle,
-                        username: oldUsername,
-                        content: articleContent
-                    });
                 } else {
                     const errorText = await response.text();
-                    console.error("Failed to update article:", errorText);
-                    alert("Failed to update article. Server response: " + errorText);
+                    console.error("Failed to post article:", errorText);
+                    alert("Failed to post article. Server response: " + errorText);
                 }
-                
-                
             } catch (error) {
                 console.error("Error posting article:", error);
                 alert("An error occurred while posting the article.");
             }
         }
+        
+        
 
         async function loadArticles() {
             try {
@@ -287,12 +289,13 @@
                     }
         
                     articles.forEach(article => {
+                        const authorName = article.anonymous ? "Anonymous" : article.username;
                         const articleItem = document.createElement('div');
                         articleItem.className = 'article-container';
                         articleItem.onclick = () => viewArticle(article);
                         articleItem.innerHTML = `
                             <div class="article-title">${article.title}</div>
-                            <div class="article-author">by ${article.username}</div>
+                            <div class="article-author">by ${authorName}</div>
                         `;
                         articlesList.appendChild(articleItem);
                     });
@@ -301,7 +304,6 @@
                     if (articles.length > 0) {
                         viewArticle(articles[0]);
                     }
-        
                 } else {
                     console.error("Failed to load articles.");
                 }
@@ -310,38 +312,51 @@
             }
         }
         
+        
 
         function viewArticle(article) {
             const articleDetails = document.querySelector('.article-details');
             articleDetails.dataset.title = article.title;
             articleDetails.dataset.username = article.username;
+            articleDetails.dataset.anonymous = article.anonymous;
+            
+            const authorName = article.anonymous ? "Anonymous" : article.username;
+            
             articleDetails.innerHTML = `
                 <div class="article-details-title">${article.title}</div>
-                <div class="article-details-author">by ${article.username}</div>
+                <div class="article-details-author">by ${authorName}</div>
                 <div class="article-details-content">${article.content}</div>
             `;
-            if (article.username === "{{ request.args.get('username') }}" || "{{ request.args.get('role') }}" === "admin") {
+            
+            const currentUsername = "{{ request.args.get('username') }}";
+            const userRole = "{{ request.args.get('role') }}";
+            
+            if (article.username === currentUsername || userRole === "admin") {
                 articleDetails.innerHTML += `
-                    <button onclick="editArticle('${article.title}', '${article.username}', '${article.content}')">Modify</button>
+                    <button onclick="editArticle('${article.title}', '${article.username}', '${article.content}', ${article.anonymous})">Modify</button>
                     <button onclick="deleteArticle('${article.title}', '${article.username}')">Delete</button>
                 `;
             }
+            
             loadComments(article.title, article.username);
         }
-
-        function editArticle(oldTitle, oldUsername, content) {
+        
+        function editArticle(oldTitle, oldUsername, content, anonymous) {
             document.getElementById('editArticleTitle').value = oldTitle;
             document.getElementById('editArticleContent').value = content;
             document.getElementById('editArticleModal').dataset.oldTitle = oldTitle;
             document.getElementById('editArticleModal').dataset.oldUsername = oldUsername;
+            document.getElementById('editArticleModal').dataset.anonymous = anonymous;
             openEditModal();
         }
-
+        
+        
         async function updateArticle() {
             const articleTitle = document.getElementById('editArticleTitle').value;
             const articleContent = document.getElementById('editArticleContent').value;
             const oldTitle = document.getElementById('editArticleModal').dataset.oldTitle;
             const oldUsername = document.getElementById('editArticleModal').dataset.oldUsername;
+            const anonymous = document.getElementById('editArticleModal').dataset.anonymous === "true";  // Ensure it's a boolean
             const username = "{{ request.args.get('username') }}";
             const sessionKey = "{{ request.args.get('sessionKey') }}";
         
@@ -363,18 +378,19 @@
                         oldUsername: oldUsername,
                         title: articleTitle,
                         content: articleContent,
+                        anonymous: anonymous,
                     }),
                 });
         
                 if (response.ok) {
-                    const result = await response.json();
                     alert("Article updated successfully!");
                     closeEditModal();
                     loadArticles().then(() => {
                         viewArticle({
                             title: articleTitle,
                             username: oldUsername,
-                            content: articleContent
+                            content: articleContent,
+                            anonymous: anonymous
                         });
                     });
                 } else {
@@ -387,6 +403,9 @@
                 alert("An error occurred while updating the article.");
             }
         }
+        
+        
+        
 
         async function deleteArticle(title, articleUsername) {
             const username = "{{ request.args.get('username') }}";

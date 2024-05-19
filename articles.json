@@ -1,32 +1,32 @@
 [
     {
-        "username": "testuser",
-        "title": "Test Title",
-        "content": "This is a test article"
+        "username": "1111",
+        "title": "dasas",
+        "content": "dasdasda",
+        "anonymous": false
     },
     {
         "username": "1111",
-        "title": "dasdasdsaDDADDADASD",
-        "content": "dasdasddsaDdasdasdasasdasdsaASDADAS1111111111DASdasdasdaseeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        "title": "dasdasda",
+        "content": "dasdasdasdas",
+        "anonymous": true
     },
     {
         "username": "1111",
-        "title": "dasdas",
-        "content": "dasdasd"
+        "title": "dasdasd",
+        "content": "dasdasda",
+        "anonymous": true
     },
     {
         "username": "1111",
-        "title": "sASas",
-        "content": "sASa"
+        "title": "11",
+        "content": "11",
+        "anonymous": true
     },
     {
         "username": "1111",
-        "title": "xasasdasdasdas",
-        "content": "                }\n            } catch (error) {\n                console.error(\"Error deleting comment:\", error);\n                alert(\"An error occurred while deleting the comment.\");\n            }\n        }\n"
-    },
-    {
-        "username": "1111",
-        "title": "dsada",
-        "content": "dadasda"
+        "title": "3333",
+        "content": "3333",
+        "anonymous": true
     }
 ]
