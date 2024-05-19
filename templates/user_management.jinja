@@ -1,6 +1,21 @@
 {% extends 'base.jinja' %}
 
 {% block content %}
+<style>
+    nav {
+        border-bottom: 1px solid black;
+        overflow: auto;
+    }
+</style>
+
+<!-- Navbar, displaying the username and logout button -->
+<nav>
+    <ol style="float: right">
+        <li style="display:inline-block">Username: {{ username|escape }}</li>
+        <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
+    </ol>
+</nav>
+
 <h1>User Management</h1>
 
 <table>
@@ -34,6 +49,8 @@
     </tbody>
 </table>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="/static/js/libs/js.cookie.min.js"></script>
 <script>
 function toggleMute(username, isMuted) {
     let sessionKey = "{{ sessionKey }}";
@@ -55,6 +72,30 @@ function toggleMute(username, isMuted) {
             console.log("Error:", xhr, status, error);
             alert("Error processing request.");
         }
+    });
+}
+
+function logout() {
+    const username = "{{ username|escape }}";
+    const data = { username: username };
+    
+    fetch('/logout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(response => {
+        if (response.ok) {
+            Cookies.remove("username");
+            sessionStorage.removeItem('sessionKey');
+            window.location.href = "{{ url_for('login') }}";
+        } else {
+            alert('Logout failed');
+        }
+    }).catch(error => {
+        console.error('Error:', error);
+        alert('Logout failed');
     });
 }
 </script>

@@ -145,6 +145,10 @@
 
 <nav>
     <button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Back to Home page</button>
+    <ol style="float: right">
+        <li style="display:inline-block">Username: {{ username|escape }}</li>
+        <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
+    </ol>
 </nav>
 
 <h1>Knowledge Repository</h1>
@@ -211,6 +215,8 @@
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="/static/js/libs/js.cookie.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         function openModal() {
@@ -312,7 +318,29 @@
             }
         }
         
-        
+        function logout() {
+            const username = "{{ username|escape }}";
+            const data = { username: username };
+            
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(response => {
+                if (response.ok) {
+                    Cookies.remove("username");
+                    sessionStorage.removeItem('sessionKey');
+                    window.location.href = "{{ url_for('login') }}";
+                } else {
+                    alert('Logout failed');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('Logout failed');
+            });
+        }
 
         function viewArticle(article) {
             const articleDetails = document.querySelector('.article-details');
