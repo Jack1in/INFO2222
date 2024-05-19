@@ -24,6 +24,9 @@ room = Room()
 def connect():
     username = request.cookies.get("username")
     room_id = request.cookies.get("room_id")
+    if db.is_user_muted(username):
+        emit('error', {'message': 'You are muted and cannot join the room'})
+        return
     if room_id is None or username is None:
         return
     # socket automatically leaves a room on client disconnect
@@ -99,6 +102,8 @@ def join(sender_name, receiver_name):
         return "You can only chat with friends!"
 
     room_id = room.get_room_id(receiver_name)
+    
+    
 
     # if the user is already inside of a room 
     if room_id is not None:
@@ -133,6 +138,3 @@ def leave(username, room_id):
     emit("incoming", (f"{username} has left the room.", "red"), to=room_id)
     leave_room(room_id)
     room.leave_room(username)
-
-
-

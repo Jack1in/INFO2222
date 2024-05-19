@@ -26,9 +26,6 @@
     <ol style="float: right">
         <li style="display:inline-block">Username: {{ username|escape }}</li>
         <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
-        {% if role == 'admin' %}
-        <li style="display:inline-block"><button onclick="window.location.href='{{ url_for('user_management', username=username, sessionKey=sessionKey) }}'">User Management</button></li>
-        {% endif %}
     </ol>
     <ul style="float: left">
         <li><strong>Friend Requests:</strong>
@@ -61,6 +58,12 @@
         </li>
         <li>
             <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey, role=role) }}'">Knowledge Repository</button>
+        </li>
+        {% if role == 'admin' %}
+        <li>
+            <button onclick="window.location.href='{{ url_for('user_management', username=username, sessionKey=sessionKey, role=role) }}'">User Management</button>
+        </li>
+        {% endif %}
     </ul>
 </nav>
 
@@ -287,6 +290,36 @@
             console.error('Error loading or decrypting messages:', error);
         }
     };
+
+    async function join_room() {
+        let receiver = $("#receiver").val();
+        let username = "{{ username|escape }}";
+    
+        try {
+            // Check if the user is muted
+            const response = await fetch(`/api/get_mute_status/${username}`);
+            const data = await response.json();
+    
+            if (data.ismuted) {
+                alert("You are muted and cannot join the chat.");
+                return;
+            }
+    
+            // If the user is not muted, proceed to join the room
+            $("#message_box").empty();
+            socket.emit("join", username, receiver, (res) => {
+                res = JSON.parse(res);
+                room_id = res.room;
+                roomUsers = res.users;
+                Cookies.set("room_id", room_id);
+                $("#chat_box").hide();
+                $("#input_box").show();
+            });
+        } catch (error) {
+            console.error('Error checking mute status:', error);
+            alert("An error occurred while checking your mute status.");
+        }
+    }
     
     function removeFriend(friendUsername) {
         let sessionKey = sessionStorage.getItem('sessionKey');
@@ -335,20 +368,6 @@
         }).catch(error => {
             console.error('Error:', error);
             alert('Logout failed');
-        });
-    }
-
-    function join_room() {
-        let receiver = $("#receiver").val();
-        // remove everything in chat box
-        $("#message_box").empty();
-        socket.emit("join", username, receiver, (res) => {
-            res = JSON.parse(res);
-            room_id = res.room;
-            roomUsers = res.users;
-            Cookies.set("room_id", room_id);
-            $("#chat_box").hide();
-            $("#input_box").show();
         });
     }
 

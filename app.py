@@ -168,14 +168,12 @@ def get_messages(username, chat_partner,room_id):
 def home():
     username = request.args.get("username")
     sessionKey = request.args.get('sessionKey')
+    role = request.args.get('role')
     if request.args.get("sessionKey") != session.get(username):
         return redirect(url_for("login"))
-    user = db.get_user(username)
-    role = user.role if user else 'user'  
     friend_requests = db.get_friend_requests(username)
     friends_list = db.get_friends_list(username)
     return render_template("home.jinja", username=username, friend_requests=friend_requests, friends_list=friends_list, sessionKey=sessionKey, role=role)
-
 
 @app.route("/send_request", methods=["POST"])
 def send_request():
@@ -314,6 +312,10 @@ def post_article():
         if session.get(username) != session_key:
             return jsonify({"error": "Invalid session key"}), 403
 
+        # Check if user is muted
+        if db.is_user_muted(username):
+            return jsonify({"error": "You are muted and cannot post articles"}), 403
+
         article = {
             "username": username,
             "title": title,
@@ -337,6 +339,7 @@ def post_article():
         print(f"Error occurred: {e}")
         # Return a 500 error and the error message
         return jsonify({"error": str(e)}), 500
+
     
 @app.route('/get_articles', methods=['GET'])
 def get_articles():
@@ -431,24 +434,25 @@ def post_comment():
             return jsonify({"error": "Request does not contain JSON"}), 400
         
         data = request.get_json()
-        
         username = data.get('username')
         session_key = data.get('sessionKey')
         article_title = data.get('articleTitle')
         article_username = data.get('articleUsername')
         content = data.get('content')
-        comment_publisher = data.get('commentPublisher')
 
         # Validate session key
         if session.get(username) != session_key:
             return jsonify({"error": "Invalid session key"}), 403
 
+        # Check if user is muted
+        if db.is_user_muted(username):
+            return jsonify({"error": "You are muted and cannot post comments"}), 403
+
         comment = {
             "username": username,
             "article_title": article_title,
             "article_username": article_username,
-            "content": content,
-            "comment_publisher": comment_publisher
+            "content": content
         }
 
         # Ensure comments.json exists and append the new comment
@@ -474,7 +478,6 @@ def post_comment():
         return jsonify({"message": "Comment posted successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/get_comments', methods=['POST'])
 def get_comments():
@@ -535,43 +538,69 @@ def delete_comment():
         return jsonify({"message": "Comment deleted successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/mute_user', methods=['POST'])
+def mute_user():
+    if not request.is_json:
+        return jsonify({"error": "Request does not contain JSON"}), 400
 
-# 用户管理页面
+    data = request.get_json()
+    username = data.get('username')
+    session_key = data.get('sessionKey')
+    target_user = data.get('targetUser')
+
+    print(f"Muting user: {target_user}")
+
+    if session.get(username) != session_key:
+        return jsonify({"error": "Invalid session key"}), 403
+
+    user = db.get_user(username)
+    if user.role != 'admin':
+        return jsonify({"error": "Permission denied"}), 403
+
+    result = db.mute_user(target_user)
+    return jsonify({"message": result})
+
+@app.route('/unmute_user', methods=['POST'])
+def unmute_user():
+    if not request.is_json:
+        return jsonify({"error": "Request does not contain JSON"}), 400
+
+    data = request.get_json()
+    username = data.get('username')
+    session_key = data.get('sessionKey')
+    target_user = data.get('targetUser')
+
+    print(f"Unmuting user: {target_user}")
+
+    if session.get(username) != session_key:
+        return jsonify({"error": "Invalid session key"}), 403
+
+    user = db.get_user(username)
+    if user.role != 'admin':
+        return jsonify({"error": "Permission denied"}), 403
+
+    result = db.unmute_user(target_user)
+    return jsonify({"message": result})
+
 @app.route('/user_management')
 def user_management():
     username = request.args.get('username')
     sessionKey = request.args.get('sessionKey')
-    if request.args.get("sessionKey") != session.get(username):
+    role = request.args.get('role')
+    if session.get(username) != sessionKey:
         return redirect(url_for("login"))
-    return render_template('user_management.jinja', username=username, sessionKey=sessionKey)
+    if role != 'admin':
+        return redirect(url_for("home", username=username, sessionKey=sessionKey, role=role))
+    users = db.get_all_users()  # You'll need to implement this function in db.py
+    return render_template('user_management.jinja', username=username, sessionKey=sessionKey, role=role, users=users)
 
-@app.route('/get_users', methods=['GET'])
-def get_users():
-    try:
-        users = db.get_all_users()
-        return jsonify(users), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/toggle_mute_user', methods=['POST'])
-def toggle_mute_user():
-    try:
-        if not request.is_json:
-            return jsonify({"error": "Request does not contain JSON"}), 400
-        
-        data = request.get_json()
-        username = data.get('username')
-        sessionKey = data.get('sessionKey')
-        target_username = data.get('target_username')
-        mute = data.get('mute')
-
-        if session.get(username) != sessionKey:
-            return jsonify({"error": "Invalid session key"}), 403
-
-        result = db.toggle_mute_user(target_username, mute)
-        return jsonify({"message": result}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+@app.route('/api/get_mute_status/<username>', methods=['GET'])
+def get_mute_status(username):
+    user = db.get_user(username)
+    if user:
+        return jsonify({"ismuted": user.ismuted}), 200
+    return jsonify({"error": "User not found"}), 404
 
 if __name__ == '__main__':
     socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
