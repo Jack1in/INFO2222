@@ -157,7 +157,6 @@
         <div id="postArticleModal">
             <div class="modal-header">
                 <h3>Post a New Article</h3>
-                <button onclick="closeModal()" style="float: right;">&times;</button>
             </div>
             <div class="modal-content">
                 <p>Title:</p>
@@ -253,14 +252,21 @@
 
                 if (response.ok) {
                     const result = await response.json();
-                    alert("Article posted successfully!");
-                    closeModal();
+                    alert("Article updated successfully!");
+                    closeEditModal();
                     loadArticles();
+                    viewArticle({
+                        title: articleTitle,
+                        username: oldUsername,
+                        content: articleContent
+                    });
                 } else {
                     const errorText = await response.text();
-                    console.error("Failed to post article:", errorText);
-                    alert("Failed to post article. Server response: " + errorText);
+                    console.error("Failed to update article:", errorText);
+                    alert("Failed to update article. Server response: " + errorText);
                 }
+                
+                
             } catch (error) {
                 console.error("Error posting article:", error);
                 alert("An error occurred while posting the article.");
@@ -274,12 +280,12 @@
                     const articles = await response.json();
                     const articlesList = document.getElementById('articles_list');
                     articlesList.innerHTML = '';
-
+        
                     if (articles.length === 0) {
                         articlesList.innerHTML = '<p>No articles available.</p>';
                         return;
                     }
-
+        
                     articles.forEach(article => {
                         const articleItem = document.createElement('div');
                         articleItem.className = 'article-container';
@@ -290,9 +296,12 @@
                         `;
                         articlesList.appendChild(articleItem);
                     });
-
+        
                     // Automatically view the first article if articles exist
-                    viewArticle(articles[0]);
+                    if (articles.length > 0) {
+                        viewArticle(articles[0]);
+                    }
+        
                 } else {
                     console.error("Failed to load articles.");
                 }
@@ -300,6 +309,7 @@
                 console.error("Error loading articles:", error);
             }
         }
+        
 
         function viewArticle(article) {
             const articleDetails = document.querySelector('.article-details');
@@ -334,12 +344,12 @@
             const oldUsername = document.getElementById('editArticleModal').dataset.oldUsername;
             const username = "{{ request.args.get('username') }}";
             const sessionKey = "{{ request.args.get('sessionKey') }}";
-
+        
             if (!articleTitle || !articleContent) {
                 alert("Title and content cannot be empty!");
                 return;
             }
-
+        
             try {
                 const response = await fetch("{{ url_for('update_article') }}", {
                     method: "PUT",
@@ -355,12 +365,18 @@
                         content: articleContent,
                     }),
                 });
-
+        
                 if (response.ok) {
                     const result = await response.json();
                     alert("Article updated successfully!");
                     closeEditModal();
-                    loadArticles();
+                    loadArticles().then(() => {
+                        viewArticle({
+                            title: articleTitle,
+                            username: oldUsername,
+                            content: articleContent
+                        });
+                    });
                 } else {
                     const errorText = await response.text();
                     console.error("Failed to update article:", errorText);
