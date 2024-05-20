@@ -81,6 +81,18 @@ Based on the analysis, we can draw the following conclusions and recommendations
 2. **Specific Feature Needs**: Users want additional features such as post withdrawal or modification, anonymous posting and dark mode.
 3. **Design Suggestions**: When designing a new social media platform or improving an existing one, focus on aesthetic interface, practical functionality, security, and user privacy protection. Additionally, consider adding the desired features to enhance user experience.
 
+### User Relevant Content Collection
+We have collected several articles as example posts for our web app, tailored to align with our target users' interests in discussing lectures and assignments, participating in coding competitions, and seeking internships and networking opportunities. These articles include:
+
+Karpe, S. (2023). "How to Stay Future-Ready: Top 5 Coding Skills that You’ll Need to Succeed in 2023." Express Computer.
+
+Ratiu, D., & Ulrich, A. (2019). "An Integrated Environment for Spin-Based C Code Checking: Towards Bringing Model-Driven Code Checking Closer to Practitioners." International Journal on Software Tools for Technology Transfer, 21(3), 267–286. https://doi.org/10.1007/s10009-019-00510-w
+
+Erciyes, K. (2021). "Algebraic Graph Algorithms: A Practical Guide Using Python." Springer International Publishing AG. https://doi.org/10.1007/978-3-030-87886-3
+
+These resources will help users stay updated on essential coding skills, advanced code checking techniques, and practical applications of graph algorithms, fostering a vibrant community of learners and professionals.
+
+
 ## Step 2: Navigation design
 
 ### Card Sorting
@@ -150,7 +162,11 @@ Dark Mode: Offers a toggle option for dark mode, enhancing the user interface ex
 Based on the feedback , we have compiled the following prioritized list of features. These features are intended to improve the overall user experience and usability of the ChatConnect application:
 
 Dark Mode
+
+Guide
+
 Anonymous Posting
+
 Modify and Retrieve Posts
 
 While not all features may be developed within the scope of this project, this list serves as a 'wish list' for future enhancements.
@@ -190,12 +206,18 @@ The result of the testing indicates that the wireframe design is generally well-
    - Implemented user authentication and authorization to manage user access and permissions.
 3. **Knowledge/Public Post**:
    - Added functionality for users to post public.
-   - 
+
+**UI After Iteration #1**:
+![UI1](report_image/ui1_1.png)  
+![UI2](report_image/ui1_2.png)
+
 **User Testing Results:**
 - **Think Aloud Test**: Conducted think aloud testing with five users to gather feedback on the initial features.
 - **Feedback**:
   - Positive: Users found the chat interface responsive and easy to use. The permission levels were appreciated for managing user access.
   - Improvements: Users suggested adding a dark mode option and enhancing the post categorization feature.
+  - The signup page need more guide.
+  - The UI is too simple and need more design.
 
 **Prioritized Features for Iteration #2**:
 1. **Anonymous Posting**:
@@ -204,6 +226,9 @@ The result of the testing indicates that the wireframe design is generally well-
    - Enable users to edit and retrieve their posts.
 3. **Improve design and aesthetics**:
    - Enhance the visual appeal of the interface with a focus on user experience.
+4. **Guide**:
+   - Provide user guides and documentation to assist users in navigating the application.
+
 
 **Iteration #2: Weeks 11-12**
 
@@ -215,15 +240,22 @@ The result of the testing indicates that the wireframe design is generally well-
 3. **Dark Mode**:
    - Added a toggle option for users to switch between light and dark modes.
 4. **Improved Design**:
-    - Enhanced the visual aesthetics of the interface based on user feedback.
-** User Testing Results:**
+   - Enhanced the visual aesthetics of the interface based on user feedback.
+5. **Guide**:
+   - Created user guides and documentation to assist users in navigating the application.
+
+**User Testing Results:**
 - **Think Aloud Test**: Conducted think aloud testing with five users to gather feedback on the new features.
 - **Feedback**:
   - Positive: Users appreciated the addition of anonymous posting and the dark mode option.
   - Improvements: Users suggested further enhancements to the post modification feature and additional customization options.
   - Concerns: Some users think current password is too easy to be brute-forced.
 
-### Outline of Evaluations Conducted
+**Final UI After Iteration #2**:
+![UI3](report_image/ui2_1.png)
+![UI4](report_image/ui2_2.png)
+
+### Outline of Final Evaluations Conducted
 
 **Evaluation Methods:**
 1. **Think Aloud Tests**:
@@ -232,13 +264,17 @@ The result of the testing indicates that the wireframe design is generally well-
 2. **Performance Metrics**:
    - Monitored the responsiveness and load times of the chat interface during testing.
 
-**Key Findings:**
+**Final Key Findings:**
 - **Ease of Use**: Most users found the interface intuitive and easy to navigate.
 - **Feature Requests**: Users frequently requested additional customization options and better notification management.
 - **Security Concerns**: Users appreciated the added security measures but suggested making the 2FA setup process simpler.
+- **Password Reset Issue**: Current password reset will change public&secret key making past messages unreadable
 
 ### Future Development Plan
 Due to time constraints, some features were not implemented in the current version of the application. Future development plans include:
+- Report function for inappropriate content.
+- Enhanced notification system for new messages and friend requests.
+- Improved password management and security features.(Current password reset will change public&secret key making past messages unreadable)
 
 
 ### Team Collaboration and Contributions
@@ -252,7 +288,15 @@ Due to time constraints, some features were not implemented in the current versi
 
 ## References
 David Lee King. (2021). Social Media Use in 2021. In David Lee King [BLOG]. Newstex.
+
 Moshagen, M., & Thielsch, M. T. (2010). Facets of visual aesthetics. International Journal of Human-Computer Studies, 68(10), 689–709. https://doi.org/10.1016/j.ijhcs.2010.05.006
+
+Karpe, S. (2023). "How to Stay Future-Ready: Top 5 Coding Skills that You’ll Need to Succeed in 2023." Express Computer.
+
+Ratiu, D., & Ulrich, A. (2019). "An Integrated Environment for Spin-Based C Code Checking: Towards Bringing Model-Driven Code Checking Closer to Practitioners." International Journal on Software Tools for Technology Transfer, 21(3), 267–286. https://doi.org/10.1007/s10009-019-00510-w
+
+Erciyes, K. (2021). "Algebraic Graph Algorithms: A Practical Guide Using Python." Springer International Publishing AG. https://doi.org/10.1007/978-3-030-87886-3
 
 
    
+
