@@ -24,24 +24,20 @@ import os
 # log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'nice_secret_ley'
 cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
 cert_path = os.path.join(cert_dir, 'localhost.crt')
 key_path = os.path.join(cert_dir, 'localhost.key')
-app.config['SECRET_KEY'] = 'nice_secret_ley'
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
-'''''
 app.config['SSL_CERT_PATH'] = cert_path
 app.config['SSL_KEY_PATH'] = key_path
 # secret key used to sign the session cookie
 app.config['SECRET_KEY'] = 'nice_secret_ley'
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SERVER_NAME'] = 'localhost:5000'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
-'''
 
 
 with open('config.json', 'r') as json_file:
@@ -525,6 +521,15 @@ def post_comment():
 
         with open('comments.json', 'r+') as file:
             comments = json.load(file)
+            
+            # Check for duplicate comment
+            for existing_comment in comments:
+                if (existing_comment['username'] == username and
+                    existing_comment['article_title'] == article_title and
+                    existing_comment['article_username'] == article_username and
+                    existing_comment['content'] == content):
+                    return jsonify({"error": "Duplicate comment detected"}), 400
+            
             comments.append(comment)
             file.seek(0)
             json.dump(comments, file, indent=4)
@@ -532,6 +537,7 @@ def post_comment():
         return jsonify({"message": "Comment posted successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/get_comments', methods=['POST'])
 def get_comments():
@@ -686,5 +692,5 @@ def change_role():
 
 
 if __name__ == '__main__':
-    socketio.run(app)
+    socketio.run(app, host='localhost', port=5000, ssl_context=(cert_path, key_path))
     

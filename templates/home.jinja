@@ -6,6 +6,7 @@
         font-family: Arial, sans-serif;
     }
 
+    
     nav {
         border-bottom: 1px solid black;
         overflow: auto;
@@ -17,6 +18,31 @@
         justify-content: center; 
         gap: 1px;
     }
+
+    nav.dark-mode {
+        border-bottom: 1px solid #121212;
+        background-color: #121212;
+        color: white;
+    }
+    
+    .dark-mode-button {
+        position: fixed;
+        TOP: 800px;
+        right: 10px;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    
+    .dark-mode-button:hover {
+        background-color: #45a049;
+    }
+    
+    
 
     .tabs button {
         padding: 15px 30px; 
@@ -90,10 +116,13 @@
     </ol>
     <div class="tabs">
         <button style="background-color: #a2bff0;">Home</button>
-        <button onclick="window.location.href='{{ url_for('chat', username=username, sessionKey=sessionKey) }}'">Chat With Friends</button>
-        <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey) }}'">Public Posts</button>
-        <button onclick="window.location.href='{{ url_for('security', username=username, sessionKey=sessionKey) }}'">Security</button>
+        <button onclick="window.location.href='{{ url_for('chat', username=username, sessionKey=sessionKey,role=role) }}'">Chat With Friends</button>
+        <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey,role=role) }}'">Public Posts</button>
+        <button onclick="window.location.href='{{ url_for('security', username=username, sessionKey=sessionKey,role=role) }}'">Security</button>
         <button onclick="showGuide()">Guide</button>
+        {% if role == 'admin' %}
+            <button onclick="window.location.href='{{ url_for('user_management', username=username, sessionKey=sessionKey, role=role) }}'">User Management</button>
+        {% endif %}
     </div>
 </nav>
 
@@ -120,7 +149,6 @@
                 <li id="friend-{{ friend.username }}">
                     {{ friend.username|escape }} - {{ friend.role|escape }} - 
                     {% if friend.online_status %}Online{% else %}Offline{% endif %}
-                    <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
                 </li>
             {% endfor %}
         </ul>
@@ -145,9 +173,6 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/static/js/libs/js.cookie.min.js"></script>
 <script>
-
-    
-
     let privateKey;
     async function initialize() {
         let username = "{{ username|escape}}";
@@ -198,8 +223,6 @@
             document.getElementById('user-role').innerText = `Role: ${data.role}`;
         }
     });
-
-    
 
     socket.on('update_room_users', (users) => {
         roomUsers = users;
@@ -426,6 +449,10 @@
             sessionStorage.removeItem('loggedIn');
         }
     });
+    
+    function showGuide() {
+        alert("Welcome to ChatConnect! This page allows you to navigate through various features like chatting with friends, viewing public posts, and managing security settings. The top navigation bar includes tabs for Home, Chat With Friends, Public Posts, Security, and Guide. Your username and a logout button are displayed at the top right. The left side shows your Friend Requests and Friends List, where you can manage your friend connections. The center of the page lists articles with their titles and authors. Click on an article to view more details. Use the input boxes and buttons to join chat rooms, send messages, and add friends. Enjoy your time on ChatConnect!");
+    }
 
     function changeRole(username) {
         let newRole = document.getElementById(`role-select-${username}`).value;
@@ -443,9 +470,6 @@
                 alert("Error changing role: " + xhr.responseText);
             }
         });
-    
-    function showGuide() {
-        alert("Welcome to ChatConnect! This page allows you to navigate through various features like chatting with friends, viewing public posts, and managing security settings. The top navigation bar includes tabs for Home, Chat With Friends, Public Posts, Security, and Guide. Your username and a logout button are displayed at the top right. The left side shows your Friend Requests and Friends List, where you can manage your friend connections. The center of the page lists articles with their titles and authors. Click on an article to view more details. Use the input boxes and buttons to join chat rooms, send messages, and add friends. Enjoy your time on ChatConnect!");
     }
 
 </script>

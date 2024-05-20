@@ -55,7 +55,6 @@
         padding: 10px;
         border-right: 1px solid #ccc;
         overflow-y: auto;
-        overflow-y: auto; 
         max-height: 100vh;
     }
 
@@ -503,7 +502,7 @@
             const currentUsername = "{{ request.args.get('username') }}";
             const userRole = "{{ request.args.get('role') }}";
         
-            if (article.username === currentUsername || userRole === "admin") {
+            if (article.username === currentUsername || userRole === "admin" || userRole === "academics") {
                 articleDetails.innerHTML += `
                     <div class="button-container">
                         <button class="modify-button" onclick="editArticle('${escapeHTML(article.title)}', '${escapeHTML(article.username)}', '${escapeHTML(article.content)}', ${article.anonymous})">Modify</button>
@@ -690,7 +689,7 @@
                         <div class="comment-author">${comment.username} (${comment.role}):</div>  <!-- Display role -->
                             <pre class="comment-content">${comment.content}</pre>
                         `;
-                        if (comment.username === "{{ request.args.get('username') }}" || "{{ request.args.get('role') }}" === "admin") {
+                        if (comment.username === "{{ request.args.get('username') }}" || "{{ request.args.get('role') }}" === "admin" || "{{ request.args.get('role') }}" === "administrative staff") {
                             commentItem.innerHTML += `
                             <button class="delete-comment-button" onclick="deleteComment('${comment.article_title}', '${comment.article_username}', '${comment.username}', '${comment.content}')">Delete Comment</button>
                             `;
@@ -779,6 +778,23 @@
         }).catch(error => {
             console.error('Error:', error);
             alert('Logout failed');
+        });
+    }
+    function changeRole(username) {
+        let newRole = document.getElementById(`role-select-${username}`).value;
+        let sessionKey = "{{ sessionKey }}";
+
+        $.ajax({
+            url: "/change_role",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ targetUser: username, newRole: newRole, sessionKey: sessionKey }),
+            success: function(response) {
+                alert(response.message);
+            },
+            error: function(xhr, status, error) {
+                alert("Error changing role: " + xhr.responseText);
+            }
         });
     }
 </script>

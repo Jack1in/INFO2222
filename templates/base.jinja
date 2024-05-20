@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}My Website{% endblock %}</title>
+    <script src="/static/js/libs/axios.min.js"></script>
+    <script src="/static/js/libs/jquery.min.js"></script>
+    <script src="/static/js/libs/js.cookie.min.js"></script>
     <style>
         body {
             background-color: white;
@@ -41,8 +44,8 @@
 
         .dark-mode-button {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 70px;
+            right: 10px;
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -86,6 +89,37 @@
                 document.querySelectorAll('button').forEach(el => el.classList.add('dark-mode'));
                 document.querySelectorAll('input').forEach(el => el.classList.add('dark-mode'));
             }
+        });
+
+        function calllogout() {
+            const username = "{{ username|escape }}";
+
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username })
+            }).then(response => {
+                if (response.ok) {
+                    Cookies.remove("username");
+                    Cookies.remove("room_id");
+                    sessionStorage.removeItem('sessionKey');
+                } else {
+                    console.error('Logout failed');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        window.addEventListener('pagehide', function(event) {
+            if (event.persisted) {
+                // The page is about to be put into the session history cache, do nothing
+                return;
+            }
+            // The page is being unloaded, call the logout function
+            calllogout();
         });
     </script>
 </body>

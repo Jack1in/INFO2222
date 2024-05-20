@@ -50,7 +50,7 @@
 
 <body>
     <ol style="float: right">
-        <li style="display:inline-block">Username: {{ username|escape }}</li>
+        <li style="display:inline-block" id="user-role">Role: {{ role|escape }}</li>
         <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
     </ol>
     <div class="tabs">
@@ -160,6 +160,23 @@
     
     function showGuide() {
         alert("You can reset your password here. More security options will be available in the future.");
+    }
+    function changeRole(username) {
+        let newRole = document.getElementById(`role-select-${username}`).value;
+        let sessionKey = "{{ sessionKey }}";
+
+        $.ajax({
+            url: "/change_role",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ targetUser: username, newRole: newRole, sessionKey: sessionKey }),
+            success: function(response) {
+                alert(response.message);
+            },
+            error: function(xhr, status, error) {
+                alert("Error changing role: " + xhr.responseText);
+            }
+        });
     }
     </script>
 </body>

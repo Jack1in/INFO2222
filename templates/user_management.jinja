@@ -197,11 +197,10 @@
 
 <nav>
     <ul>
-        <li><button onclick="window.location.href='{{ url_for('knowledge_repository', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Knowledge Repository</button></li>
         <li><button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Home Page</button></li>
     </ul>
     <ol>
-        <li>Username: {{ username|escape }}</li>
+        <li style="display:inline-block" id="user-role">Role: {{ role|escape }}</li>
         <li><button onclick="logout()">Logout</button></li>
     </ol>
 </nav>
@@ -267,7 +266,7 @@ function toggleDarkMode() {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('darkMode') === 'enabled') {
-        toggleDarkMode(); // 确保初始加载时应用 dark mode（如果之前启用了）
+        toggleDarkMode(); 
     }
 });
 
@@ -338,6 +337,8 @@ function logout() {
         console.error('Error:', error);
         alert('Logout failed');
     });
+
 }
+
 </script>
 {% endblock %}
