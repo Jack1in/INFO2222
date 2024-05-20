@@ -175,7 +175,9 @@ While not all features may be developed within the scope of this project, this l
 Steps to Determine the Best Design
 
 Brainstorming and Sketching: Our team began by brainstorming potential layouts and features. We sketched various designs for key interfaces such as the chat window and post page.
+
 Prototype Creation: Based on our sketches, we created low-fidelity digital prototypes using Figma. These prototypes focused on layout and functionality without detailed design elements.
+
 Guerrilla Testing: We conducted guerrilla testing with target users, including both team members and one participant outside our team. Each team member facilitated a test session to gather diverse feedback.
 Feedback Analysis: We analyzed the feedback to identify common usability issues and preferences. 
 
@@ -208,7 +210,11 @@ The result of the testing indicates that the wireframe design is generally well-
    - Added functionality for users to post public.
 
 **UI After Iteration #1**:
+
+Signup Page
 ![UI1](report_image/ui1_1.png)  
+
+Home Page
 ![UI2](report_image/ui1_2.png)
 
 **User Testing Results:**
@@ -244,6 +250,17 @@ The result of the testing indicates that the wireframe design is generally well-
 5. **Guide**:
    - Created user guides and documentation to assist users in navigating the application.
 
+**Final UI After Iteration #2**:
+
+Final Singup Page
+![UI3](report_image/ui2_1.png)
+
+Final Home Page
+![UI4](report_image/ui2_2.png)
+
+Final Post Page
+![UI5](report_image/ui2_3.png)
+
 **User Testing Results:**
 - **Think Aloud Test**: Conducted think aloud testing with five users to gather feedback on the new features.
 - **Feedback**:
@@ -251,9 +268,6 @@ The result of the testing indicates that the wireframe design is generally well-
   - Improvements: Users suggested further enhancements to the post modification feature and additional customization options.
   - Concerns: Some users think current password is too easy to be brute-forced.
 
-**Final UI After Iteration #2**:
-![UI3](report_image/ui2_1.png)
-![UI4](report_image/ui2_2.png)
 
 ### Outline of Final Evaluations Conducted
 
