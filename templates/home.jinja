@@ -5,6 +5,7 @@
     body {
         font-family: Arial, sans-serif;
     }
+
     nav {
         border-bottom: 1px solid black;
         overflow: auto;
@@ -32,22 +33,55 @@
         border-left: 1px solid white; 
     }
 
-    #message_box {
-        border: 1px solid black;
-        height: 400px;
-        width: 800px;
-        overflow: auto;
-        padding: 2px;
+    .main-content {
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .friends-list {
+        width: 200px;
+        border-right: 1px solid black;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    .articles-list {
+        flex: 1;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    .article-container {
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+    }
+
+    .article-title {
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .article-author {
+        font-size: 14px;
+        color: #777;
     }
 
     .text {
         margin-top: 2px;
         margin-bottom: 2px;
     }
+
+    .footer {
+        margin-top: auto;
+        padding: 10px;
+        border-top: 1px solid black;
+        text-align: center;
+    }
 </style>
 
 <!-- Navbar, displaying the username and friend functionalities -->
-
 <nav>
     <ol style="float: right">
         <li style="display:inline-block">Username: {{ username|escape }}</li>
@@ -56,85 +90,53 @@
     <div class="tabs">
         <button style="background-color: #a2bff0;">Home</button>
         <button onclick="window.location.href='{{ url_for('chat', username=username, sessionKey=sessionKey) }}'">Chat With Friends</button>
-        <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey) }}'">Pulic Posts</button>
+        <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey) }}'">Public Posts</button>
         <button onclick="window.location.href='{{ url_for('security', username=username, sessionKey=sessionKey) }}'">Security</button>
         <button onclick="showGuide()">Guide</button>
     </div>
-    <ul style="float: left">
-        <li><strong>Friend Requests:</strong>
-            {% if friend_requests %}
-                <ul>
-                    {% for request in friend_requests %}
-                        <li id="request-{{ request.username }}">{{ request.username|escape}}
-                            <button onclick="acceptRequest('{{ request.username|escape }}')">Accept</button>
-                            <button onclick="rejectRequest('{{ request.username|escape }}')">Reject</button>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No friend requests.</p>
-            {% endif %}
-        </li>
-        <li><strong>Friends List:</strong>
-            <ul id="friends_list">
-                {% for friend in friends_list %}
-                    <li id="friend-{{ friend.username }}">
-                        {{ friend.username|escape }} - {{ friend.role|escape }} - 
-                        {% if friend.online_status %}Online{% else %}Offline{% endif %}
-                        <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
+</nav>
+
+<div class="main-content">
+    <!-- Friends list section -->
+    <div class="friends-list">
+        <strong>Friend Requests:</strong>
+        {% if friend_requests %}
+            <ul>
+                {% for request in friend_requests %}
+                    <li id="request-{{ request.username }}">{{ request.username|escape}}
+                        <button onclick="acceptRequest('{{ request.username|escape }}')">Accept</button>
+                        <button onclick="rejectRequest('{{ request.username|escape }}')">Reject</button>
                     </li>
                 {% endfor %}
             </ul>
-            {% if not friends_list %}
-                <p id="no_friends_msg">No friends yet.</p>
-            {% endif %}
-        </li>
-        <li>
-            <button onclick="window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey, role=role) }}'">Knowledge Repository</button>
-        </li>
-        <li>
-            <button onclick="window.location.href='{{ url_for('security', username=username, sessionKey=sessionKey, role=role) }}'">Security</button>
-        </li>
-        <li>
-            <button onclick="window.location.href='{{ url_for('chat', username=username, sessionKey=sessionKey, role=role) }}'">Chat</button>
-        </li>
-        {% if role == 'admin' %}
-        <li>
-            <button onclick="window.location.href='{{ url_for('user_management', username=username, sessionKey=sessionKey, role=role) }}'">User Management</button>
-        </li>
+        {% else %}
+            <p>No friend requests.</p>
         {% endif %}
-    </ul>
-</nav>
+        
+        <strong>Friends List:</strong>
+        <ul id="friends_list">
+            {% for friend in friends_list %}
+                <li id="friend-{{ friend.username }}">
+                    {{ friend.username|escape }} - {{ friend.role|escape }} - 
+                    {% if friend.online_status %}Online{% else %}Offline{% endif %}
+                    <button onclick="removeFriend('{{ friend.username|escape }}')">Remove</button>
+                </li>
+            {% endfor %}
+        </ul>
+        {% if not friends_list %}
+            <p id="no_friends_msg">No friends yet.</p>
+        {% endif %}
+    </div>
 
+    <!-- Articles list section -->
+    <div class="articles-list" id="articles_list">
+        <!-- Articles will be loaded here -->
+    </div>
+</div>
 
-<h1>Messaging App</h1>
-
-<main>
-    <!-- The messages are displayed here -->
-    <section id="message_box"></section>
-
-    <!-- Chat box for choosing a chat partner -->
-    <section id="chat_box">
-        <p class="text">Chat with:</p>
-        <input id="receiver" placeholder="username">
-        <button onclick="join_room()">Chat</button>
-    </section>
-
-    <!-- The input box for sending messages, initially hidden -->
-    <section id="input_box" style="display: none">
-        <p class="text">Message:</p>
-        <input id="message" placeholder="message">
-        <button onclick="send()">Send</button>
-        <button onclick="leave()">Leave Room</button>
-    </section>
-
-    <!-- Friend request box for adding new friends -->
-    <section id="friend_request_box">
-        <p class="text">Add Friend:</p>
-        <input id="friend_username" placeholder="Enter friend's username">
-        <button onclick="send_friend_request()">Send Friend Request</button>
-    </section>
-</main>
+<div class="footer">
+    <h1>Welcome to ChatConnect</h1>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
@@ -167,17 +169,13 @@
     });
 
     $(document).ready(() => {
-        // room_id is undefined if the user hasn't joined a room
-        // we early return in this case
         initialize();
-        // emit disconnect event if the user has joined a room
-        socket.emit("disconnect");
+        loadArticles();
         if (Cookies.get("room_id") == undefined) {
             return;
         }
         $("#chat_box").hide();
         $("#input_box").show();
-        room_id = parseInt(Cookies.get("room_id"));
     });
 
     let username = "{{ username|escape}}";
@@ -187,7 +185,6 @@
     let roomUsers = {};
     let publicKeys = {};
 
-    // normal incoming message event
     socket.on("incoming", (msg, color="black") => {
         add_message(msg, color);
     });
@@ -195,7 +192,6 @@
     socket.on('update_room_users', (users) => {
         roomUsers = users;
         console.log("Updated room users:", roomUsers);
-        // empty the message box
         $("#message_box").empty();
         for (let user of roomUsers) {
             if (user != username)
@@ -203,10 +199,7 @@
         }
     });
 
-    // normal incoming message event
-    // an incoming message arrives, we'll add the message to the message box
     socket.on("incoming_message", async (data, color = "black") => {
-        
         const parts = data.split(": ");
         if (parts.length < 3) {
             console.error("Received malformed message.");
@@ -218,7 +211,6 @@
         const signature = parts[2];
         decryptedMessage = await decryptMessage(privateKey, encryptedMsg);
 
-        // verify the signature of the message
         const hash = forge.md.sha256.create();
         hash.update(decryptedMessage, 'utf8');
         const messageHash = hash.digest().toHex();
@@ -228,172 +220,82 @@
         
         if (!isValidSignature) {
             console.error("Signature verification failed.");
-            return; // Optionally handle this case visibly to the user
+            return;
         }
 
-        // make the message as sender_name: message
         decryptedMessage = `${sender}: ${decryptedMessage}`;
         add_message(decryptedMessage, color);
     });
 
-    
-    // Modified send function to encrypt message before sending
     async function send() {
         let message = $("#message").val();
         $("#message").val("");
         let local_message = `${username}: ${message}`;
         add_message(local_message, "blue");
         const sender = username;
-        const publicKey_sender = await fetchPublicKey(sender);  // Fetch the sender's public key from server
+        const publicKey_sender = await fetchPublicKey(sender);
         const encryptedMessage_sender = await encryptMessage(publicKey_sender, message);
         for (let user of roomUsers) {
             if (user != sender) {
                 const receiver = user;
-                // Encryption of the message
-                const publicKey_receiver = await fetchPublicKey(receiver);  // Fetch the receiver's public key from server
+                const publicKey_receiver = await fetchPublicKey(receiver);
                 const encryptedMessage = await encryptMessage(publicKey_receiver, message);
 
-                // Signature of the message
                 const hash = forge.md.sha256.create();
                 hash.update(message, 'utf8');
                 const messageHash = hash.digest().toHex();
                 const signature = await signMessage(privateKey, messageHash);
 
-                socket.emit("send", username,user, encryptedMessage,encryptedMessage_sender,signature,room_id);
+                socket.emit("send", username, user, encryptedMessage, encryptedMessage_sender, signature, room_id);
             }
         }
     };
 
-    // Function to fetch public key from server
     async function fetchPublicKey(receiver) {
         try {
             const response = await axios.get(`/api/public-keys/${receiver}`);
-            return response.data.publicKey;  // Assuming the server sends back the public key directly
+            return response.data.publicKey;
         } catch (error) {
             console.error('Failed to fetch public key:', error);
             return null;
         }
     };
 
-    async function loadAndDisplayMessages(username, chatPartner) {
+    async function loadArticles() {
         try {
-            // load password from local storage
-            let sessionKey = sessionStorage.getItem('sessionKey');
-            const requestData = {
-                username: username,
-                chatPartner: chatPartner,
-                sessionKey: sessionKey
-            };
-            
-            const response = await fetch("/request_history", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(requestData)
-            });
+            const response = await fetch("{{ url_for('get_articles') }}");
+            if (response.ok) {
+                const articles = await response.json();
+                const articlesList = document.getElementById('articles_list');
+                articlesList.innerHTML = '';
 
-            if (!response.ok || response.status !== 200) {
-                console.log('No existing messages or failed to load messages.');
-                return; // Exit the function if there's no messages or an error occurred
-            }
+                if (articles.length === 0) {
+                    articlesList.innerHTML = '<p>No articles available.</p>';
+                    return;
+                }
 
-            const messages = await response.json();
-            user_public_key = await fetchPublicKey(username);
-            chatPartner_public_key = await fetchPublicKey(chatPartner);
-            for (const message of messages) {
-                const decryptedMessage = await decryptMessage(privateKey, message.message);
-                if (username == message.username){
-                    // verify the signature of the message
-                    const hash = forge.md.sha256.create();
-                    hash.update(decryptedMessage, 'utf8');
-                    const messageHash = hash.digest().toHex();
-                    const isValidSignature = await verifySignature(user_public_key, messageHash, message.signature);
-                    if (!isValidSignature) {
-                        console.error("Signature verification failed.");
-                        return; // Optionally handle this case visibly to the user
-                    } 
-                    add_message(`${message.username}: ${decryptedMessage}`, "blue");
-                }
-                else{
-                    // verify the signature of the message
-                    const hash = forge.md.sha256.create();
-                    hash.update(decryptedMessage, 'utf8');
-                    const messageHash = hash.digest().toHex();
-                    const isValidSignature = await verifySignature(chatPartner_public_key, messageHash, message.signature);
-                    if (!isValidSignature) {
-                        console.error("Signature verification failed.");
-                        return; // Optionally handle this case visibly to the user
-                    } 
-                    add_message(`${message.username}: ${decryptedMessage}`, "black");
-                
-                }
+                articles.forEach(article => {
+                    const authorName = article.anonymous ? "Anonymous" : article.username;
+                    const articleItem = document.createElement('div');
+                    articleItem.className = 'article-container';
+                    // onclick navigate to the "knowledge_repository"
+                    articleItem.onclick = function(){
+                        window.location.href='{{ url_for('knowledge_repository', username=username, sessionKey=sessionKey) }}'
+                    };
+                    articleItem.innerHTML = `
+                        <div class="article-title">${article.title}</div>
+                        <div class="article-author">by ${authorName}</div>
+                    `;
+                    articlesList.appendChild(articleItem);
+                });
+
+            } else {
+                console.error("Failed to load articles.");
             }
         } catch (error) {
-            console.error('Error loading or decrypting messages:', error);
-        }
-    };
-
-    async function join_room() {
-        let receiver = $("#receiver").val();
-        let username = "{{ username|escape }}";
-    
-        try {
-            // Check if the user is muted
-            const response = await fetch(`/api/get_mute_status/${username}`);
-            const data = await response.json();
-    
-            if (data.ismuted) {
-                alert("You are muted and cannot join the chat.");
-                return;
-            }
-    
-            // If the user is not muted, proceed to join the room
-            $("#message_box").empty();
-            socket.emit("join", username, receiver, (res) => {
-                // if res is a string then it is an error message
-                try{
-                    res = JSON.parse(res);
-                    room_id = res.room;
-                    roomUsers = res.users;
-                    Cookies.set("room_id", room_id);
-                    $("#chat_box").hide();
-                    $("#input_box").show();
-                }
-                catch(err){
-                    alert(res);
-                }
-            });
-        } catch (error) {
-            console.error('Error checking mute status:', error);
-            alert("An error occurred while checking your mute status.");
+            console.error("Error loading articles:", error);
         }
     }
-    
-    function removeFriend(friendUsername) {
-        let sessionKey = sessionStorage.getItem('sessionKey');
-        $.ajax({
-            url: "/remove_friend",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({ username: "{{ username|escape }}", friend_username: friendUsername, sessionKey: sessionKey }),
-            success: function(response) {
-                if (response.result === "Friend removed successfully.") {
-                    let friendItem = document.getElementById(`friend-${friendUsername}`);
-                    if (friendItem) {
-                        friendItem.parentNode.removeChild(friendItem);
-                    }
-                    alert("Friend removed successfully.");
-                } else {
-                    alert(response.result);
-                }
-            },
-            error: function() {
-                alert("Error processing request.");
-            }
-        });
-    }
-    
 
     function logout() {
         const username = "{{ username|escape }}";
@@ -420,118 +322,63 @@
         });
     }
 
-    function leave() {
-        Cookies.remove("room_id");
-        socket.emit("leave", username, room_id);
-        $("#input_box").hide();
-        $("#chat_box").show();
-    };
-
-    function add_message(message, color) {
-        let box = document.getElementById("message_box");
-        let child = document.createElement("p");
-        child.style.color = color;
-        child.textContent = message;
-        box.appendChild(child);
-    };
-
-    // function to encrypt a message
-    async function encryptMessage(publicKeyPem, message) {
-        try{
-            const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
-            const buffer = forge.util.createBuffer(message, 'utf8');
-            const encrypted = publicKey.encrypt(buffer.getBytes(), 'RSA-OAEP');
-            return forge.util.encode64(encrypted);
-        }catch(error){
-            console.log("error caused by encryptMessage");
-            throw error;
-        }
-    };
-
-    // function to decrypt a message
-    async function decryptMessage(privateKeyPem, encryptedMessageBase64) {
-        try{
-            const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
-            const encrypted = forge.util.decode64(encryptedMessageBase64);
-            const decrypted = privateKey.decrypt(encrypted, 'RSA-OAEP');
-            return decrypted;
-        }catch(error){
-            console.log("error caused by decryptMessage");
-            throw error;
-        }
-    };
-
-    async function signMessage(privateKeyPem, messageHash) {
-        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
-        const signature = privateKey.sign(forge.md.sha256.create().update(messageHash, 'utf8'));
-        return forge.util.encode64(signature);
-    }
-
-    async function verifySignature(publicKeyPem, messageHash, signature) {
-        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
-        const signatureBytes = forge.util.decode64(signature);
-        return publicKey.verify(forge.md.sha256.create().update(messageHash, 'utf8').digest().getBytes(), signatureBytes);
-    }
-
     function getPrivateKey(username) {
-        // Attempt to retrieve the private key from localStorage
         const privateKey = localStorage.getItem(username + "_privateKey");
         if (privateKey) {
             console.log("Private key retrieved successfully.");
-            return privateKey; // Return the private key
+            return privateKey;
         } else {
             console.log("No private key found.");
-            return null; // No private key found
+            return null;
         }
     }
 
-    
-function send_friend_request() {
-    let friend_username = $("#friend_username").val();
-    sessionKey = sessionStorage.getItem('sessionKey');
-    $.ajax({
-        url: "/send_request",
-        type: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({ sender: "{{ username|escape }}", receiver: friend_username,sessionKey: sessionKey}),
-        success: function(response) {
-            alert("Request status: " + response.result);
-        },
-        error: function() {
-            alert("Failed to send friend request.");
-        }
-    });
-}
-
-function acceptRequest(requestUsername) {
-    let sessionKey = sessionStorage.getItem('sessionKey');
-    $.ajax({
-        url: "/accept_friend_request",
-        type: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}",sessionKey: sessionKey}),
-        success: function(response) {
-            if (response.result === "Friend added successfully.") {
-                let friendsList = document.getElementById('friends_list');
-                let newFriend = document.createElement('li');
-                newFriend.textContent = requestUsername; 
-                friendsList.appendChild(newFriend);
-                if (friendsList.children.length === 1) {
-                    let noFriendsMsg = document.getElementById('no_friends_msg');
-                    if (noFriendsMsg) noFriendsMsg.parentNode.removeChild(noFriendsMsg);
-                }
-                let requestItem = document.getElementById(`request-${requestUsername}`);
-                if (requestItem) requestItem.parentNode.removeChild(requestItem);
-                alert("Friend request accepted.");
-            } else {
-                alert(response.result);
+    function send_friend_request() {
+        let friend_username = $("#friend_username").val();
+        sessionKey = sessionStorage.getItem('sessionKey');
+        $.ajax({
+            url: "/send_request",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ sender: "{{ username|escape }}", receiver: friend_username, sessionKey: sessionKey}),
+            success: function(response) {
+                alert("Request status: " + response.result);
+            },
+            error: function() {
+                alert("Failed to send friend request.");
             }
-        },
-        error: function() {
-            alert("Error processing request.");
-        }
-    });
-}
+        });
+    }
+
+    function acceptRequest(requestUsername) {
+        let sessionKey = sessionStorage.getItem('sessionKey');
+        $.ajax({
+            url: "/accept_friend_request",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}", sessionKey: sessionKey}),
+            success: function(response) {
+                if (response.result === "Friend added successfully.") {
+                    let friendsList = document.getElementById('friends_list');
+                    let newFriend = document.createElement('li');
+                    newFriend.textContent = requestUsername; 
+                    friendsList.appendChild(newFriend);
+                    if (friendsList.children.length === 1) {
+                        let noFriendsMsg = document.getElementById('no_friends_msg');
+                        if (noFriendsMsg) noFriendsMsg.parentNode.removeChild(noFriendsMsg);
+                    }
+                    let requestItem = document.getElementById(`request-${requestUsername}`);
+                    if (requestItem) requestItem.parentNode.removeChild(requestItem);
+                    alert("Friend request accepted.");
+                } else {
+                    alert(response.result);
+                }
+            },
+            error: function() {
+                alert("Error processing request.");
+            }
+        });
+    }
 
     function rejectRequest(requestUsername) {
         let sessionKey = sessionStorage.getItem('sessionKey');
@@ -539,7 +386,7 @@ function acceptRequest(requestUsername) {
             url: "/reject_friend_request",
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}",sessionKey: sessionKey}),
+            data: JSON.stringify({ sender: requestUsername, receiver: "{{ username|escape }}", sessionKey: sessionKey}),
             success: function(response) {
                 if (response.result === "Friend request rejected.") {
                     $(`#request-${requestUsername}`).remove();
@@ -567,9 +414,9 @@ function acceptRequest(requestUsername) {
             sessionStorage.removeItem('loggedIn');
         }
     });
-
+    
     function showGuide() {
-        alert("Guide will be shown here.");
+        alert("Welcome to ChatConnect! This page allows you to navigate through various features like chatting with friends, viewing public posts, and managing security settings. The top navigation bar includes tabs for Home, Chat With Friends, Public Posts, Security, and Guide. Your username and a logout button are displayed at the top right. The left side shows your Friend Requests and Friends List, where you can manage your friend connections. The center of the page lists articles with their titles and authors. Click on an article to view more details. Use the input boxes and buttons to join chat rooms, send messages, and add friends. Enjoy your time on ChatConnect!");
     }
 
 </script>
