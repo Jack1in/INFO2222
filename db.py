@@ -30,6 +30,16 @@ def insert_user(username: str, password: str, public_key: str, role: str):
         session.add(user)
         session.commit()
 
+def update_password(username: str, password: str,public_key: str):
+    with Session(engine) as session:
+        user = session.query(User).filter_by(username=username).first()
+        if user:
+            user.password = password
+            user.public_key = public_key
+            session.commit()
+            return "Password updated successfully."
+        return "User not found."
+
 # gets a user from the database
 def get_user(username: str):
     with Session(engine) as session:
