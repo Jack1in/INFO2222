@@ -334,7 +334,19 @@ def post_article():
         user = db.get_user(username)
         role = user.role if user else "unknown"
 
-        article = {
+        if not os.path.exists('articles.json'):
+            with open('articles.json', 'w') as file:
+                json.dump([], file)
+
+        with open('articles.json', 'r') as file:
+            articles = json.load(file)
+
+        # Check for duplicate title and author
+        for article in articles:
+            if article['username'] == username and article['title'] == title:
+                return jsonify({"error": "An article with the same title by this author already exists."}), 400
+
+        new_article = {
             "username": username,
             "role": role,  # Include role
             "title": title,
@@ -342,14 +354,9 @@ def post_article():
             "anonymous": anonymous
         }
 
-        if not os.path.exists('articles.json'):
-            with open('articles.json', 'w') as file:
-                json.dump([], file)
-
-        with open('articles.json', 'r+') as file:
-            articles = json.load(file)
-            articles.append(article)
-            file.seek(0)
+        # Add new article to the list and save
+        articles.append(new_article)
+        with open('articles.json', 'w') as file:
             json.dump(articles, file, indent=4)
 
         return jsonify({"message": "Article posted successfully"}), 200

@@ -24,6 +24,11 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
+        .login-container input {
+            background-color: white;
+            color: #000; 
+        }
+
         h1 {
             text-align: center;
             font-size: 24px;
@@ -41,7 +46,7 @@
             border-radius: 5px;
         }
 
-        button {
+        .login-button {
             width: 100%;
             padding: 10px;
             background-color: #4CAF50;
@@ -52,7 +57,7 @@
             font-size: 16px;
         }
 
-        button:hover {
+        .login-button:hover {
             background-color: #45a049;
         }
     </style>
@@ -64,24 +69,21 @@
         <input id="username"/>
         <p>Pick a password (4-20 characters)</p>
         <input id="password" type="password"/>
-        <button onclick="login()">Login</button>
+        <button class="login-button" onclick="login()">Login</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/node-forge/dist/forge.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
     <script>
-        // Utility function to check if a URL is valid for redirection
         function isValidURL(string) {
             return string.length > 0 && string.startsWith("/");
         }
 
-        // Function to handle user login
         async function login() {
             const username = document.getElementById("username").value;
             const password = document.getElementById("password").value;
 
-            // Check if the password is at least 4 characters long
             if (password.length < 4) {
                 alert("Password must be at least 4 characters long.");
                 return;
@@ -102,11 +104,7 @@
                 }
                 sessionStorage.setItem('sessionKey', res.data.session_key);
 
-                // The server validated the user's credentials successfully
-                // Now generate the key pair based on the username and password
                 generateKeysAndStore(username, password);
-
-                // Redirect to the URL provided by the server
                 window.open(res.data.home_url, "_self");
             } catch (error) {
                 console.error("Error during login", error);
@@ -114,30 +112,22 @@
             }
         }
 
-        // Function to generate keys and store them in local storage
         async function generateKeysAndStore(username, password) {
-            // Use PBKDF2 to generate a deterministic "seed" from the password
-            const salt = username; // Using the username as the salt
+            const salt = username;
             const key = forge.pkcs5.pbkdf2(password, salt, 1000, 16);
 
-            // Convert the key to a hex string and use it as the seed for PRNG
             const seed = forge.util.bytesToHex(key);
-
-            // Initialize PRNG with the seed
             const prng = forge.random.createInstance();
             prng.seedFileSync = function(needed) {
                 return forge.util.hexToBytes(seed);
             };
 
-            // Generate key pair using the seeded PRNG
             const keypair = forge.pki.rsa.generateKeyPair({bits: 2048, prng: prng});
 
-            // Convert keys to PEM format
             const publicKeyPem = forge.pki.publicKeyToPem(keypair.publicKey);
             const privateKeyPem = forge.pki.privateKeyToPem(keypair.privateKey);
 
-            // Store keys in localStorage with username as part of the key
-            localStorage.setItem(username+"_password", password)
+            localStorage.setItem(username+"_password", password);
             localStorage.setItem(username + "_publicKey", publicKeyPem);
             localStorage.setItem(username + "_privateKey", privateKeyPem);
         }

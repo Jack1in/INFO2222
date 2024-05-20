@@ -2,6 +2,8 @@
 
 {% block content %}
 <style>
+
+
     #postArticleModal, #editArticleModal {
         display: none;
         position: fixed;
@@ -36,6 +38,7 @@
 
     .container {
         display: flex;
+        height: calc(100vh);
     }
 
     .left-panel {
@@ -43,12 +46,15 @@
         padding: 10px;
         border-right: 1px solid #ccc;
         overflow-y: auto;
+        overflow-y: auto; 
+        max-height: 100vh;
     }
 
     .right-panel {
         width: 75%;
         padding: 10px;
         overflow-y: auto;
+        max-height: 100vh;
     }
 
     .article-container {
@@ -69,7 +75,7 @@
     .article-title {
         font-size: 1.2em;
         font-weight: bold;
-        color: black; /* Ensure title color is always black */
+        color: black;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -86,6 +92,7 @@
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border: 3px solid #000;
     }
 
     .article-details {
@@ -93,6 +100,8 @@
         color: black;
         word-wrap: break-word;
         white-space: pre-wrap;
+        display: flex;
+        flex-direction: column;
     }
 
     .article-details-title {
@@ -105,6 +114,10 @@
         font-size: 1.1em;
         color: #555;
         margin-bottom: 15px;
+    }
+
+    .article-details-content {
+        margin-bottom: 20px; /* Add margin at the bottom to separate from buttons */
     }
 
     .input-field {
@@ -141,22 +154,150 @@
         word-wrap: break-word;
         white-space: pre-wrap;
     }
-</style>
 
-<nav>
-    <button onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Home Page</button>
-    <ol style="float: right">
-        <li style="display:inline-block">Username: {{ username|escape }}</li>
-        <li style="display:inline-block"><button onclick="logout()">Logout</button></li>
-    </ol>
-</nav>
+    nav {
+        border-bottom: 1px solid white;
+        overflow: auto;
+        background-color: #ffffff;
+        padding: 10px 0;
+        color: black;
+    }
+
+    nav.dark-mode {
+        border-bottom: 1px solid #121212;
+        background-color: #121212;
+        color: white;
+    }
+
+    .dark-mode-button {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .dark-mode-button:hover {
+        background-color: #45a049;
+    }
+
+    .custom-button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 10px 20px;
+    }
+
+    .custom-button:hover {
+        background-color: #45a049;
+    }
+
+    .home-button {
+        position: absolute;
+        top: 10px;
+        left: 200px;
+        width: 180px;
+    }
+
+    .user-info {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        align-items: center;
+    }
+
+    .user-info span {
+        margin-right: 10px;
+        font-size: 16px;
+        color: black;
+    }
+
+    .user-info button {
+        margin-left: 10px;
+    }
+
+    .post-article-button {
+        width: 100%; 
+    }
+
+    .modify-button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 5px 10px;
+        margin-right: 10px; /* Add margin to the right for spacing */
+    }
+    
+    .modify-button:hover {
+        background-color: #45a049;
+    }
+    
+    .delete-button {
+        background-color: #FF5733;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 5px 10px;
+    }
+    
+    .delete-button:hover {
+        background-color: #C70039;
+    }
+    
+    .button-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px; /* Add margin at the bottom to separate from content */
+    }
+
+    .delete-comment-button {
+        background-color: #FF5733;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 5px 10px;
+        float: right;
+        margin-top: 10px; 
+    }
+    
+    .delete-comment-button:hover {
+        background-color: #C70039;
+    }
+
+
+</style>
+</head>
+<body>
+    <nav>
+        <button class="custom-button home-button" onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Home Page</button>
+        <div class="user-info">
+            <span>Username: {{ username|escape }}</span>
+            <button class="custom-button" onclick="logout()">Logout</button>
+        </div>
+    </nav>
 
 <h1>Knowledge Repository</h1>
 
 <main class="container">
     <section class="left-panel" id="articles">
         <h2>Articles</h2>
-        <button id="postArticleBtn">Post Article</button>
+        <button class="custom-button post-article-button" id="postArticleBtn">Post Article</button>
 
         <div id="postArticleModal">
             <div class="modal-header">
@@ -172,36 +313,29 @@
                 </label>
             </div>
             <div class="modal-footer">
-                <button onclick="postArticle()">Submit</button>
-                <button onclick="closeModal()">Cancel</button>
+                <button class="custom-button" onclick="postArticle()">Submit</button>
+                <button class="custom-button" onclick="closeModal()">Cancel</button>
             </div>
         </div>
-        
-        
-        
 
-        <div id="articles_list">
-        </div>
+        <div id="articles_list"></div>
     </section>
 
     <section class="right-panel">
         <h2>Article Details</h2>
         <div id="article_details" class="article-details-container">
-            <div class="article-details">
-            </div>
+            <div class="article-details"></div>
         </div>
         <h3>Comments</h3>
-        <div id="comments_list">
-        </div>
+        <div id="comments_list"></div>
         <textarea id="commentContent" class="input-field" placeholder="Write your comment here..."></textarea>
-        <button onclick="postComment()">Post Comment</button>
+        <button class="custom-button" onclick="postComment()">Post Comment</button>
     </section>
 </main>
 
 <div id="editArticleModal">
     <div class="modal-header">
         <h3>Edit Article</h3>
-        <button onclick="closeEditModal()" style="float: right;">&times;</button>
     </div>
     <div class="modal-content">
         <p>Title:</p>
@@ -210,8 +344,8 @@
         <textarea id="editArticleContent" class="input-field" placeholder="Write your article here..."></textarea>
     </div>
     <div class="modal-footer">
-        <button onclick="updateArticle()">Update</button>
-        <button onclick="closeEditModal()">Cancel</button>
+        <button class="custom-button" onclick="updateArticle()">Update</button>
+        <button class="custom-button" onclick="closeEditModal()">Cancel</button>
     </div>
 </div>
 
@@ -260,7 +394,7 @@
                         sessionKey: sessionKey,
                         title: articleTitle,
                         content: articleContent,
-                        anonymous: anonymous,  // Ensure anonymous field is included
+                        anonymous: anonymous,
                     }),
                 });
         
@@ -269,9 +403,10 @@
                     closeModal();
                     loadArticles();
                 } else {
-                    const errorText = await response.text();
-                    console.error("Failed to post article:", errorText);
-                    alert("Failed to post article. Server response: " + errorText);
+                    const errorResponse = await response.json();
+                    const errorMessage = errorResponse.error || "Unknown error occurred.";
+                    console.error("Failed to post article:", errorMessage);
+                    alert("Failed to post article. " + errorMessage);
                 }
             } catch (error) {
                 console.error("Error posting article:", error);
@@ -320,32 +455,42 @@
         
         
 
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+        
         function viewArticle(article) {
             const articleDetails = document.querySelector('.article-details');
-            articleDetails.dataset.title = article.title;
-            articleDetails.dataset.username = article.username;
+            articleDetails.dataset.title = escapeHTML(article.title);
+            articleDetails.dataset.username = escapeHTML(article.username);
             articleDetails.dataset.anonymous = article.anonymous;
-            
-            const authorName = article.anonymous ? "Anonymous" : article.username;
-            
+        
+            const authorName = article.anonymous ? "Anonymous" : escapeHTML(article.username);
+        
             articleDetails.innerHTML = `
-                <div class="article-details-title">${article.title}</div>
-                <div class="article-details-author">by ${authorName} (${article.role})</div>  <!-- Display role -->
-                <div class="article-details-content">${article.content}</div>
+                <div class="article-details-title">${escapeHTML(article.title)}</div>
+                <div class="article-details-author">by ${authorName} (${escapeHTML(article.role)})</div>
+                <div class="article-details-content">${escapeHTML(article.content)}</div>
             `;
-            
+        
             const currentUsername = "{{ request.args.get('username') }}";
             const userRole = "{{ request.args.get('role') }}";
-            
+        
             if (article.username === currentUsername || userRole === "admin") {
                 articleDetails.innerHTML += `
-                    <button onclick="editArticle('${article.title}', '${article.username}', '${article.content}', ${article.anonymous})">Modify</button>
-                    <button onclick="deleteArticle('${article.title}', '${article.username}')">Delete</button>
+                    <div class="button-container">
+                        <button class="modify-button" onclick="editArticle('${escapeHTML(article.title)}', '${escapeHTML(article.username)}', '${escapeHTML(article.content)}', ${article.anonymous})">Modify</button>
+                        <button class="delete-button" onclick="deleteArticle('${escapeHTML(article.title)}', '${escapeHTML(article.username)}')">Delete</button>
+                    </div>
                 `;
             }
-            
+        
             loadComments(article.title, article.username);
         }
+        
+        
         
         function editArticle(oldTitle, oldUsername, content, anonymous) {
             document.getElementById('editArticleTitle').value = oldTitle;
@@ -402,7 +547,7 @@
                 } else {
                     const errorText = await response.text();
                     console.error("Failed to update article:", errorText);
-                    alert("Failed to update article. Server response: " + errorText);
+                    alert("Failed to update article." + errorText);
                 }
             } catch (error) {
                 console.error("Error updating article:", error);
@@ -442,7 +587,7 @@
                 } else {
                     const errorText = await response.text();
                     console.error("Failed to delete article:", errorText);
-                    alert("Failed to delete article. Server response: " + errorText);
+                    alert("Failed to delete article." + errorText);
                 }
             } catch (error) {
                 console.error("Error deleting article:", error);
@@ -451,18 +596,18 @@
         }
 
         async function postComment() {
-            const commentContent = document.getElementById('commentContent').value;
+            const commentContent = escapeHTML(document.getElementById('commentContent').value);
             const articleTitle = document.querySelector('.article-details').dataset.title;
             const articleUsername = document.querySelector('.article-details').dataset.username;
             const username = "{{ request.args.get('username') }}";
             const sessionKey = "{{ request.args.get('sessionKey') }}";
             const commentPublisher = username;
-
+        
             if (!commentContent) {
                 alert("Comment cannot be empty!");
                 return;
             }
-
+        
             try {
                 const response = await fetch("{{ url_for('post_comment') }}", {
                     method: "POST",
@@ -472,13 +617,13 @@
                     body: JSON.stringify({
                         username: username,
                         sessionKey: sessionKey,
-                        articleTitle: articleTitle,
-                        articleUsername: articleUsername,
+                        articleTitle: escapeHTML(articleTitle),
+                        articleUsername: escapeHTML(articleUsername),
                         content: commentContent,
                         commentPublisher: commentPublisher
                     }),
                 });
-
+        
                 if (response.ok) {
                     const result = await response.json();
                     alert("Comment posted successfully!");
@@ -487,13 +632,14 @@
                 } else {
                     const errorText = await response.text();
                     console.error("Failed to post comment:", errorText);
-                    alert("Failed to post comment. Server response: " + errorText);
+                    alert("Failed to post comment." + errorText);
                 }
             } catch (error) {
                 console.error("Error posting comment:", error);
                 alert("An error occurred while posting the comment.");
             }
         }
+        
 
         async function loadComments(title, username) {
             try {
@@ -521,7 +667,7 @@
                         `;
                         if (comment.username === "{{ request.args.get('username') }}" || "{{ request.args.get('role') }}" === "admin") {
                             commentItem.innerHTML += `
-                                <button onclick="deleteComment('${comment.article_title}', '${comment.article_username}', '${comment.username}', '${comment.content}')">Delete Comment</button>
+                            <button class="delete-comment-button" onclick="deleteComment('${comment.article_title}', '${comment.article_username}', '${comment.username}', '${comment.content}')">Delete Comment</button>
                             `;
                         }
                         commentsList.appendChild(commentItem);
@@ -565,7 +711,7 @@
                 } else {
                     const errorText = await response.text();
                     console.error("Failed to delete comment:", errorText);
-                    alert("Failed to delete comment. Server response: " + errorText);
+                    alert("Failed to delete comment." + errorText);
                 }
             } catch (error) {
                 console.error("Error deleting comment:", error);

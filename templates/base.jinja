@@ -1,26 +1,22 @@
-<!-- 
-All pages inherit from this page, this is the "base" page. 
-Think of Java inheritance, but for web pages, eww... 
-
-Contains script tags that tells the browser where to locate the JQuery scripts.
-This code is pretty gross since everything is imported globally, if you're familiar with Python
-this is equivalent to a bunch of glob imports -> import * from jquery. 
-
-Yeah I know it's pretty ugly...
--->
 <!DOCTYPE html>
-{% autoescape true %}
-<html>
-
+<html lang="en">
 <head>
-    <title>HTML :)</title> 
-    <script src="/static/js/libs/axios.min.js"></script>
-    <script src="/static/js/libs/jquery.min.js"></script>
-    <script src="/static/js/libs/js.cookie.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Website{% endblock %}</title>
     <style>
         body {
             background-color: white;
             color: black;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
         }
 
         body.dark-mode {
@@ -42,17 +38,32 @@ Yeah I know it's pretty ugly...
             color: white;
             border: 1px solid white;
         }
+
+        .dark-mode-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 180px;
+        }
+
+        .dark-mode-button:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
-
 <body>
     <nav>
-        <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
-        <!-- Other nav content can go here -->
+        <button class="dark-mode-button" onclick="toggleDarkMode()">Dark Mode</button>
     </nav>
 
-    <!-- The content from any other page goes here -->
-    {% block content %} {% endblock %}
+    {% block content %}{% endblock %}
 
     <script>
         function toggleDarkMode() {
@@ -70,11 +81,12 @@ Yeah I know it's pretty ugly...
 
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('darkMode') === 'enabled') {
-                toggleDarkMode(); // Ensure the initial load applies dark mode if it was enabled
+                document.body.classList.add('dark-mode');
+                document.querySelectorAll('nav').forEach(el => el.classList.add('dark-mode'));
+                document.querySelectorAll('button').forEach(el => el.classList.add('dark-mode'));
+                document.querySelectorAll('input').forEach(el => el.classList.add('dark-mode'));
             }
         });
     </script>
 </body>
-
 </html>
-{% endautoescape %}
