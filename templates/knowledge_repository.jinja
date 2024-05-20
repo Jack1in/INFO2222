@@ -3,6 +3,15 @@
 {% block content %}
 <style>
 
+    .user-info-text {
+        color: black;
+    }
+
+    /* Dark mode */
+    .dark-mode .user-info-text {
+        color: white;
+    }
+
 
     #postArticleModal, #editArticleModal {
         display: none;
@@ -280,17 +289,32 @@
         background-color: #C70039;
     }
 
+    .always-black {
+        color: black;
+    }
+    
+    /* Ensure checkbox remains black */
+    .always-black input[type="checkbox"] {
+        color: black;
+    }
+
 
 </style>
 </head>
 <body>
     <nav>
         <button class="custom-button home-button" onclick="window.location.href='{{ url_for('home', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">Home Page</button>
+        {% if request.args.get('role') == 'admin' %}
+            <button class="custom-button home-button" style="left: 390px;" onclick="window.location.href='{{ url_for('user_management', username=request.args.get('username'), sessionKey=request.args.get('sessionKey'), role=request.args.get('role')) }}'">User Management</button>
+        {% endif %}
         <div class="user-info">
-            <span>Username: {{ username|escape }}</span>
+            <span class="user-info-text">Username: {{ username|escape }} Role: {{ request.args.get('role')|escape }}</span>
             <button class="custom-button" onclick="logout()">Logout</button>
         </div>
+        
     </nav>
+    
+    
 
 <h1>Knowledge Repository</h1>
 
@@ -308,9 +332,10 @@
                 <input type="text" id="articleTitle" class="input-field" placeholder="Enter the title">
                 <p>Content:</p>
                 <textarea id="articleContent" class="input-field" placeholder="Write your article here..."></textarea>
-                <label>
+                <label class="always-black">
                     <input type="checkbox" id="anonymousCheck"> Post Anonymously
                 </label>
+                
             </div>
             <div class="modal-footer">
                 <button class="custom-button" onclick="postArticle()">Submit</button>

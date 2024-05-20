@@ -46,9 +46,10 @@
             border-radius: 5px;
         }
 
-        .login-button {
+        .login-button, .signup-button {
             width: 100%;
             padding: 10px;
+            margin: 5px 0;
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -57,19 +58,22 @@
             font-size: 16px;
         }
 
-        .login-button:hover {
+        .login-button:hover, .signup-button:hover {
             background-color: #45a049;
         }
     </style>
 </head>
 <body>
+    
     <div class="login-container">
         <h1>Login</h1>
         <p>Your account name</p>
-        <input id="username"/>
+        <input id="username" style="color: black;"/>
         <p>Pick a password (4-20 characters)</p>
-        <input id="password" type="password"/>
+        <input id="password" type="password" style="color: black;"/>
+
         <button class="login-button" onclick="login()">Login</button>
+        <button class="signup-button" onclick="signup()">Sign Up</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -130,6 +134,10 @@
             localStorage.setItem(username+"_password", password);
             localStorage.setItem(username + "_publicKey", publicKeyPem);
             localStorage.setItem(username + "_privateKey", privateKeyPem);
+        }
+
+        function signup() {
+            window.location.href = "{{ url_for('index') }}";
         }
     </script>
 </body>
